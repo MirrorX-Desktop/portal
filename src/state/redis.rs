@@ -1,5 +1,7 @@
 use std::{ops::Add, string, time::Duration};
 
+use log::info;
+
 use crate::utility;
 
 pub struct RedisStore {
@@ -34,7 +36,18 @@ impl RedisStore {
             .query_async(&mut con)
             .await?;
 
-        if expire_ts.is_none() || expire_ts.unwrap() > chrono::Utc::now().timestamp() {
+        info!("{:?}", expire_ts);
+
+        if expire_ts.is_none() {
+            return Ok(None);
+        }
+
+        if expire_ts.unwrap() < chrono::Utc::now().timestamp() {
+            redis::cmd("HDEL")
+                .arg(format!("device_id_bucket:{}", bucket_id))
+                .arg(id)
+                .query_async(&mut con)
+                .await?;
             return Ok(None);
         }
 
