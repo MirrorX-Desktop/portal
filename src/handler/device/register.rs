@@ -1,11 +1,14 @@
-use std::sync::Arc;
-
+use crate::state::State;
 use actix_web::{web, HttpResponse};
 use log::error;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use ring::{digest, hmac};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-use crate::{state::State, utility};
+static DEVICE_ID_REGEX: Lazy<Regex> =
+    Lazy::new(|| regex::Regex::new(r"^[0-9]{2}-[0-9]{4}-[0-9]{4}$").unwrap());
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterReq {
@@ -22,52 +25,45 @@ pub async fn register(
     state: web::Data<Arc<State>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     if let Some(device_id) = &req.device_id {
-        match state.redis.refresh_device_id(device_id) {
-            Ok(Some(expire_at)) => {
-                let sign_value =
-                    sign_token(device_id.to_owned(), expire_at.to_string()).map_err(|err| {
-                        error!("sign_token error: {}", err);
-                        actix_web::error::ErrorInternalServerError(err)
-                    })?;
-                return Ok(HttpResponse::Ok().json(RegisterResp { token: sign_value }));
-            }
+        if !DEVICE_ID_REGEX.is_match(device_id) {
+            return Err(actix_web::error::ErrorBadRequest("device_id is invalid"));
+        }
+
+        let res = match state.redis.refresh_device_id(device_id).await {
+            Ok(res) => res,
             Err(err) => {
-                error!("device_id_renew: {:?}", err);
+                error!("refresh_device_id: {:?}", err);
                 return Err(actix_web::error::ErrorInternalServerError(err));
             }
-            _ => {}
         };
+
+        if let Some(new_expire_ts) = res {
+            match sign_token(device_id.to_owned(), new_expire_ts.to_string()) {
+                Ok(sign_value) => {
+                    return Ok(HttpResponse::Ok().json(RegisterResp { token: sign_value }));
+                }
+                Err(err) => {
+                    error!("sign_token error: {}", err);
+                    return Err(actix_web::error::ErrorInternalServerError(err));
+                }
+            }
+        }
     }
 
-    // allocate a new device id
-
-    let mut failure_counter = 0;
-
-    loop {
-        // alphabet without 0, O, I, L
-        let new_device_id = utility::device_id_generator::generate();
-
-        match state.redis.pub_new_device_id(&new_device_id) {
-            Ok(Some(expire_at)) => {
-                let sign_value =
-                    sign_token(new_device_id, expire_at.to_string()).map_err(|err| {
-                        error!("sign_token error: {}", err);
-                        actix_web::error::ErrorInternalServerError(err)
-                    })?;
+    match state.redis.new_device_id().await {
+        Ok(res) => match sign_token(res.0.to_owned(), res.1.to_string()) {
+            Ok(sign_value) => {
                 return Ok(HttpResponse::Ok().json(RegisterResp { token: sign_value }));
             }
-            Ok(None) => continue,
             Err(err) => {
-                // only error increase fail counter
-                failure_counter += 1;
-                if failure_counter < 10 {
-                    continue;
-                }
-
-                error!("too many failures, lastest error: {:?}", err);
+                error!("sign_token error: {}", err);
                 return Err(actix_web::error::ErrorInternalServerError(err));
             }
-        };
+        },
+        Err(err) => {
+            error!("new_device_id: {:?}", err);
+            return Err(actix_web::error::ErrorInternalServerError(err));
+        }
     }
 }
 
