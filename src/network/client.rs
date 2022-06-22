@@ -33,6 +33,7 @@ static CLIENTS_INSERT_MUTEX: Lazy<tokio::sync::Mutex<()>> =
     Lazy::new(|| tokio::sync::Mutex::new(()));
 
 pub struct Client {
+    #[allow(dead_code)]
     device_id: String,
     packet_tx: Sender<Vec<u8>>,
     atomic_call_id: AtomicU8,
@@ -56,7 +57,7 @@ impl Client {
             .next()
             .await
             .ok_or(anyhow::anyhow!("recevied EOF while waiting for handshake"))?
-            .map_err(|err| anyhow::anyhow!("handshake message is invalid"))?;
+            .map_err(|err| anyhow::anyhow!("handshake message is invalid ({})", err))?;
 
         let packet = BINCODE_SERIALIZER
             .deserialize::<SignalingMessagePacket>(&packet_bytes)
@@ -240,7 +241,7 @@ fn serve_stream(
                 match BINCODE_SERIALIZER.deserialize::<SignalingMessagePacket>(&packet_bytes) {
                     Ok(packet) => packet,
                     Err(err) => {
-                        // error!(err = ?err, "signaling_serve_stream: deserialize packet failed");
+                        error!("serve_stream: deserialize packet failed ({})", err);
                         break;
                     }
                 };

@@ -57,9 +57,7 @@ pub struct HandshakeResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct ConnectRequest {
-    pub remote_device_id: String,
-}
+pub struct ConnectRequest {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ConnectResponse {

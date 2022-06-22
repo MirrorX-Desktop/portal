@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::spawn(async move {
         loop {
-            let (stream, addr) = match listener.accept().await {
+            let (stream, _) = match listener.accept().await {
                 Ok(endpoint) => endpoint,
                 Err(err) => {
                     error!("listener accept: {:?}", err);
