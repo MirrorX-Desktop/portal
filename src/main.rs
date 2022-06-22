@@ -1,29 +1,31 @@
+mod component;
 mod db;
 mod network;
-mod utility;
 
-use env_logger::{Builder, Target};
-use log::{error, LevelFilter};
-use std::io::Write;
+use anyhow::bail;
+use log::{error, info};
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    init_logger();
-    db::init("".to_string()).await?;
+    component::logger::init();
+    component::config::init()?;
+
+    let cfg = match component::config::CONFIG.get() {
+        Some(v) => v,
+        None => bail!("read config instance failed"),
+    };
+
+    db::init(cfg.db.uri.as_ref()).await?;
     db::ensuere_schema().await?;
 
-    let (exit_tx, exit_rx) = std::sync::mpsc::channel();
-    ctrlc::set_handler(move || {
-        let _ = exit_tx.send(());
-    })
-    .map_err(|err| anyhow::anyhow!(err))?;
-
-    // let state = Arc::new(state::State::new()?);
-
-    let listener = TcpListener::bind("127.0.0.1:2345").await?;
+    let listener = TcpListener::bind(cfg.listen_addr.clone()).await?;
 
     tokio::spawn(async move {
+        if let Ok(addr) = listener.local_addr() {
+            info!("server listen on: {}", addr);
+        }
+
         loop {
             let (stream, _) = match listener.accept().await {
                 Ok(endpoint) => endpoint,
@@ -41,24 +43,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    exit_rx.recv().map_err(|err| anyhow::anyhow!(err))
-}
-
-fn init_logger() {
-    Builder::new()
-        .filter_level(LevelFilter::Info)
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "[{}] [{}({}#{})] {} {}",
-                chrono::Local::now().format("%Y-%m-%d %H:%M:%S.%3f"),
-                record.module_path().unwrap_or(""),
-                record.file().unwrap_or(""),
-                record.line().unwrap_or(0),
-                record.level(),
-                record.args(),
-            )
-        })
-        .target(Target::Stdout)
-        .init();
+    tokio::signal::ctrl_c()
+        .await
+        .map_err(|err| anyhow::anyhow!("failed to listen for event ({})", err))
 }

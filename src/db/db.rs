@@ -7,13 +7,13 @@ use std::time::Duration;
 
 static DB_POOL: OnceCell<Pool<Any>> = OnceCell::new();
 
-pub async fn init(url: String) -> anyhow::Result<()> {
+pub async fn init(url: &str) -> anyhow::Result<()> {
     let logic_processors = num_cpus::get();
 
     let pool = sqlx::any::AnyPoolOptions::new()
         .max_connections(logic_processors as u32 + 1)
         .max_lifetime(Duration::from_secs(30 * 60))
-        .connect(&url)
+        .connect(url)
         .await?;
 
     DB_POOL

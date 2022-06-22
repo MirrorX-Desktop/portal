@@ -2,7 +2,7 @@ use super::{
     handler::{handle_handshake, handle_heartbeat},
     message::{SignalingMessage, SignalingMessageError, SignalingMessagePacketType},
 };
-use crate::{network::message::SignalingMessagePacket, utility::serializer::BINCODE_SERIALIZER};
+use crate::{component::serializer::BINCODE_SERIALIZER, network::message::SignalingMessagePacket};
 use anyhow::bail;
 use bincode::Options;
 use bytes::Bytes;
