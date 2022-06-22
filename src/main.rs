@@ -1,45 +1,47 @@
-use std::io::Write;
-use std::sync::Arc;
-
-use actix_web::{middleware, web, App, HttpServer};
-use env_logger::{Builder, Target};
-use log::LevelFilter;
-
-mod handler;
-mod state;
+mod db;
+mod network;
 mod utility;
+
+use env_logger::{Builder, Target};
+use log::{error, LevelFilter};
+use std::io::Write;
+use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     init_logger();
+    db::init("".to_string()).await?;
+    db::ensuere_schema().await?;
 
-    let state = Arc::new(state::State::new()?);
-
-    HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .wrap(middleware::Compress::default())
-            .app_data(web::Data::new(state.clone()))
-            // .service(
-            //     web::scope("/product")
-            //         .route("/version", web::get().to(service::http::product::version))
-            //         .route(
-            //             "/changelog",
-            //             web::get().to(service::http::product::changelog),
-            //         )
-            //         .route(
-            //             "/billboard",
-            //             web::get().to(service::http::product::billboard),
-            //         ),
-            // )
-            .service(
-                web::scope("/device").route("/register", web::post().to(handler::device::register)),
-            )
+    let (exit_tx, exit_rx) = std::sync::mpsc::channel();
+    ctrlc::set_handler(move || {
+        let _ = exit_tx.send(());
     })
-    .bind("0.0.0.0:40000")?
-    .run()
-    .await
-    .map_err(|err| anyhow::anyhow!(err))
+    .map_err(|err| anyhow::anyhow!(err))?;
+
+    // let state = Arc::new(state::State::new()?);
+
+    let listener = TcpListener::bind("127.0.0.1:2345").await?;
+
+    tokio::spawn(async move {
+        loop {
+            let (stream, addr) = match listener.accept().await {
+                Ok(endpoint) => endpoint,
+                Err(err) => {
+                    error!("listener accept: {:?}", err);
+                    break;
+                }
+            };
+
+            tokio::spawn(async move {
+                if let Err(err) = network::client::Client::serve(stream).await {
+                    error!("{}", err)
+                }
+            });
+        }
+    });
+
+    exit_rx.recv().map_err(|err| anyhow::anyhow!(err))
 }
 
 fn init_logger() {

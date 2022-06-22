@@ -1,1 +1,1 @@
-pub mod device_id_generator;
+pub mod serializer;
