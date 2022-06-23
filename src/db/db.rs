@@ -27,7 +27,7 @@ pub async fn ensuere_schema() -> anyhow::Result<()> {
             r"
 CREATE TABLE IF NOT EXISTS devices (
   id BIGINT PRIMARY KEY NOT NULL, 
-  deivce_hash char(128) NOT NULL, 
+  device_hash char(128) NOT NULL, 
   expire INT NOT NULL
 )
     ",

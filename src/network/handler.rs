@@ -79,17 +79,22 @@ pub async fn handle_handshake(
                 + chrono::Duration::days(90))
             .num_seconds() as i32;
 
-            if let Ok(_) = crate::db::insert_device(&crate::db::entities::Device {
+            match crate::db::insert_device(&crate::db::entities::Device {
                 id: id.clone(),
                 device_hash: req.device_hash.clone(),
                 expire,
             })
             .await
             {
-                return Ok(HandshakeResponse {
-                    device_id: format!("{:0>10}", id),
-                    expire,
-                });
+                Ok(_) => {
+                    return Ok(HandshakeResponse {
+                        device_id: format!("{:0>10}", id),
+                        expire,
+                    })
+                }
+                Err(err) => {
+                    error!("{}", err);
+                }
             }
         }
 

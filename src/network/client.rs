@@ -252,6 +252,7 @@ fn serve_stream(
             });
         }
 
+        CLIENTS.remove(&client.device_id);
         info!("serve stream read loop exit");
     });
 }
@@ -265,7 +266,7 @@ fn serve_sink(
             let buffer = match packet_rx.recv().await {
                 Some(buffer) => buffer,
                 None => {
-                    info!("signaling_serve_sink: packet_rx all sender has dropped, going to exit");
+                    info!("serve_sink: packet_rx all sender has dropped, going to exit");
                     break;
                 }
             };
@@ -273,15 +274,12 @@ fn serve_sink(
             // trace!(buffer = ?format!("{:02X?}", buffer), "signaling_serve_sink: send");
 
             if let Err(err) = sink.send(Bytes::from(buffer)).await {
-                error!(
-                    "signaling_serve_sink: send failed, going to exit ({:?})",
-                    err
-                );
+                error!("serve_sink: send failed, going to exit ({:?})", err);
                 break;
             }
         }
 
-        info!("signaling_serve_sink: exit");
+        info!("serve_sink: exit");
     });
 }
 
