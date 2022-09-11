@@ -1195,15 +1195,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proto"
-version = "0.1.0"
-dependencies = [
- "prost",
- "tonic",
- "tonic-build",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1407,33 +1398,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
- "bincode",
- "bytes",
- "chrono",
- "dashmap",
- "env_logger",
- "futures",
- "log",
- "num_cpus",
- "once_cell",
- "rand",
- "regex",
- "ring",
- "scopeguard",
- "serde",
- "serde_bytes",
- "sqlx",
- "tokio",
- "tokio-util",
- "toml",
-]
-
-[[package]]
 name = "sha-1"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1462,6 +1426,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "signaling_proto"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
+name = "signaling_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "bincode",
+ "bytes",
+ "chrono",
+ "dashmap",
+ "env_logger",
+ "futures",
+ "log",
+ "num_cpus",
+ "once_cell",
+ "rand",
+ "regex",
+ "ring",
+ "scopeguard",
+ "serde",
+ "serde_bytes",
+ "sqlx",
+ "tokio",
+ "tokio-util",
+ "toml",
 ]
 
 [[package]]
