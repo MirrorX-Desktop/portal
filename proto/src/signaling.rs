@@ -1,19 +1,21 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RegisterRequest {
-    #[prost(string, optional, tag="1")]
-    pub device_id: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(fixed64, optional, tag="1")]
+    pub device_id: ::core::option::Option<u64>,
     #[prost(string, tag="2")]
     pub device_finger_print: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RegisterResponse {
-    #[prost(string, tag="1")]
-    pub device_id: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub device_id: u64,
+    #[prost(sfixed64, tag="2")]
+    pub expire: i64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HeartbeatRequest {
-    #[prost(string, tag="1")]
-    pub local_device_id: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub local_device_id: u64,
     #[prost(fixed32, tag="2")]
     pub timestamp: u32,
 }
@@ -24,10 +26,10 @@ pub struct HeartbeatResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VisitRequest {
-    #[prost(string, tag="1")]
-    pub active_device_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub passive_device_id: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub active_device_id: u64,
+    #[prost(fixed64, tag="2")]
+    pub passive_device_id: u64,
     #[prost(enumeration="ResourceType", tag="3")]
     pub resource_type: i32,
 }
@@ -38,10 +40,10 @@ pub struct VisitResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VisitReplyRequest {
-    #[prost(string, tag="1")]
-    pub active_device_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub passive_device_id: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub active_device_id: u64,
+    #[prost(fixed64, tag="2")]
+    pub passive_device_id: u64,
     #[prost(bool, tag="3")]
     pub allow: bool,
 }
@@ -50,10 +52,10 @@ pub struct VisitReplyResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyExchangeRequest {
-    #[prost(string, tag="1")]
-    pub active_device_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub passive_device_id: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub active_device_id: u64,
+    #[prost(fixed64, tag="2")]
+    pub passive_device_id: u64,
     #[prost(bytes="vec", tag="3")]
     pub password_salt: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="4")]
@@ -63,19 +65,19 @@ pub struct KeyExchangeRequest {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyExchangeResponse {
-    #[prost(string, tag="1")]
-    pub active_device_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub passive_device_id: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub active_device_id: u64,
+    #[prost(fixed64, tag="2")]
+    pub passive_device_id: u64,
     #[prost(bytes="vec", tag="3")]
     pub secret: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyExchangeReplyRequest {
-    #[prost(string, tag="1")]
-    pub active_device_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub passive_device_id: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub active_device_id: u64,
+    #[prost(fixed64, tag="2")]
+    pub passive_device_id: u64,
     #[prost(oneof="key_exchange_reply_request::KeyExchangeReply", tags="3, 4")]
     pub key_exchange_reply: ::core::option::Option<key_exchange_reply_request::KeyExchangeReply>,
 }
@@ -114,10 +116,10 @@ pub struct KeyExchangePassiveDeviceSecret {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SubscribeRequest {
-    #[prost(string, tag="1")]
-    pub device_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub device_finger_print: ::prost::alloc::string::String,
+    #[prost(fixed64, tag="1")]
+    pub device_id: u64,
+    #[prost(fixed64, tag="2")]
+    pub device_finger_print: u64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PublishMessage {
@@ -147,8 +149,8 @@ impl ResourceType {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            ResourceType::Desktop => "desktop",
-            ResourceType::Files => "files",
+            ResourceType::Desktop => "RESOURCE_TYPE_DESKTOP",
+            ResourceType::Files => "RESOURCE_TYPE_FILES",
         }
     }
 }
@@ -166,9 +168,9 @@ impl KeyExchangeReplyError {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            KeyExchangeReplyError::Internal => "internal",
-            KeyExchangeReplyError::InvalidArgs => "invalid_args",
-            KeyExchangeReplyError::InvalidPassword => "invalid_password",
+            KeyExchangeReplyError::Internal => "KEY_EXCHANGE_REPLY_ERROR_INTERNAL",
+            KeyExchangeReplyError::InvalidArgs => "KEY_EXCHANGE_REPLY_ERROR_INVALID_ARGS",
+            KeyExchangeReplyError::InvalidPassword => "KEY_EXCHANGE_REPLY_ERROR_INVALID_PASSWORD",
         }
     }
 }

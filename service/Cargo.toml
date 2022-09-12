@@ -9,10 +9,8 @@ edition = "2021"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_bytes = "0.11.6"
 chrono = "0.4.19"
-env_logger = "0.9.0"
-log = "0.4.17"
-tokio = { version = "1.19.2", features = ["full"] }
-tokio-util = { version = "0.7.3", features = ["full"] }
+tokio = { version = "1.21.0", features = ["full"] }
+tokio-util = { version = "0.7.4", features = ["full"] }
 anyhow = "1.0.58"
 ring = "0.16.20"
 base64 = "0.13.0"
@@ -31,6 +29,11 @@ sqlx = { version = "0.6.0", features = [
 num_cpus = "1.13.1"
 scopeguard = "1.1.0"
 toml = "0.5.9"
+signaling_proto = { path = "../proto" }
+prost = "0.11.0"
+tonic = { version = "0.8.0", features = ["gzip"] }
+tracing = "0.1.36"
+tracing-subscriber = "0.3.15"
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

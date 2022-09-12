@@ -1,49 +1,35 @@
-mod component;
+mod config;
 mod db;
-mod network;
+mod handlers;
 
-use anyhow::bail;
-use log::{error, info};
-use tokio::net::TcpListener;
+use crate::handlers::SignalingService;
+use config::CONFIG;
+use signaling_proto::signaling_server::SignalingServer;
+use std::time::Duration;
+use tonic::{codegen::CompressionEncoding, transport::server::TcpIncoming, transport::Server};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    component::logger::init();
-    component::config::init()?;
+    db::init(&CONFIG.db.uri).await?;
+    db::ensure_schema().await?;
 
-    let cfg = match component::config::CONFIG.get() {
-        Some(v) => v,
-        None => bail!("read config instance failed"),
-    };
+    let incoming = TcpIncoming::new(
+        CONFIG.listen_addr.parse()?,
+        true,
+        Some(Duration::from_secs(60 * 10)),
+    )
+    .map_err(|err| anyhow::anyhow!(err))?;
 
-    db::init(cfg.db.uri.as_ref()).await?;
-    db::ensuere_schema().await?;
+    let service = SignalingServer::new(SignalingService {})
+        .accept_compressed(CompressionEncoding::Gzip)
+        .send_compressed(CompressionEncoding::Gzip);
 
-    let listener = TcpListener::bind(cfg.listen_addr.clone()).await?;
+    Server::builder()
+        .add_service(service)
+        .serve_with_incoming_shutdown(incoming, async {
+            let _ = tokio::signal::ctrl_c().await;
+        })
+        .await?;
 
-    tokio::spawn(async move {
-        if let Ok(addr) = listener.local_addr() {
-            info!("server listen on: {}", addr);
-        }
-
-        loop {
-            let (stream, _) = match listener.accept().await {
-                Ok(endpoint) => endpoint,
-                Err(err) => {
-                    error!("listener accept: {:?}", err);
-                    break;
-                }
-            };
-
-            tokio::spawn(async move {
-                if let Err(err) = network::client::Client::serve(stream).await {
-                    error!("{}", err)
-                }
-            });
-        }
-    });
-
-    tokio::signal::ctrl_c()
-        .await
-        .map_err(|err| anyhow::anyhow!("failed to listen for event ({})", err))
+    Ok(())
 }

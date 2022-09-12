@@ -2,7 +2,7 @@ use super::entities;
 use anyhow::bail;
 use futures::TryStreamExt;
 use once_cell::sync::OnceCell;
-use sqlx::{Any, Executor, Pool, Row};
+use sqlx::{Any, Execute, Executor, Pool, QueryBuilder, Row, Sqlite};
 use std::time::Duration;
 
 static DB_POOL: OnceCell<Pool<Any>> = OnceCell::new();
@@ -21,14 +21,14 @@ pub async fn init(url: &str) -> anyhow::Result<()> {
         .map_err(|_| anyhow::anyhow!("set DB_POOL cell with db pool failed"))
 }
 
-pub async fn ensuere_schema() -> anyhow::Result<()> {
+pub async fn ensure_schema() -> anyhow::Result<()> {
     if let Some(pool) = DB_POOL.get() {
         let _ = sqlx::query(
             r"
 CREATE TABLE IF NOT EXISTS devices (
-  id BIGINT PRIMARY KEY NOT NULL, 
-  device_hash char(128) NOT NULL, 
-  expire INT NOT NULL
+  id UNSIGNED BIGINT PRIMARY KEY NOT NULL, 
+  finger_print char(128) NOT NULL, 
+  expire BIGINT NOT NULL
 )
     ",
         )
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS devices (
     }
 }
 
-pub async fn query_device_by_id(device_id: i64) -> anyhow::Result<Option<entities::Device>> {
+pub async fn query_device_by_id(device_id: u64) -> anyhow::Result<Option<entities::Device>> {
     if let Some(pool) = DB_POOL.get() {
         sqlx::query_as::<_, entities::Device>(r#"SELECT * FROM devices WHERE id = ?"#)
             .bind(device_id)
@@ -54,47 +54,52 @@ pub async fn query_device_by_id(device_id: i64) -> anyhow::Result<Option<entitie
     }
 }
 
-pub async fn query_free_ids(device_id_range_min: i64) -> anyhow::Result<Vec<i64>> {
-    let ids: Vec<i64> = (device_id_range_min..device_id_range_min + 20).collect();
+pub async fn query_device_available_ids(ids: &[u64], timestamp: i64) -> anyhow::Result<Vec<u64>> {
+    let mut query_builder: QueryBuilder<Sqlite> =
+        QueryBuilder::new("SELECT id FROM devices WHERE expire <= ? AND id IN (");
 
-    let mut q = sqlx::query(
-        r#"SELECT id FROM devices WHERE id IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
-    );
-
-    for i in &ids {
-        q = q.bind(*i);
+    let mut separated = query_builder.separated(", ");
+    for id in ids {
+        separated.push_bind(id);
     }
 
+    separated.push_unseparated(")");
+
+    let mut query = query_builder.build();
+    let sql = query.sql();
+
     if let Some(pool) = DB_POOL.get() {
-        let mut rows = q.fetch(pool);
-        let mut exist_ids = Vec::new();
-
-        while let Some(row) = rows.try_next().await? {
-            let id: i64 = row.try_get("id")?;
-            exist_ids.push(id);
-        }
-
-        let free_ids = ids
-            .iter()
-            .filter(|v| !exist_ids.contains(*v))
-            .map(|v| *v)
-            .collect::<Vec<_>>();
-
-        Ok(free_ids)
+        sqlx::query_as::<_, u64>(sql)
+            .bind(timestamp)
+            .fetch_all(pool)
+            .await
+            .map_err(|err| anyhow::anyhow!(err))
     } else {
         bail!("db pool not initialized")
     }
 }
 
-pub async fn insert_device(entity: &entities::Device) -> anyhow::Result<()> {
+pub async fn insert_device(
+    device_id: u64,
+    device_finger_print: &str,
+    expire: i64,
+) -> anyhow::Result<()> {
     let res = DB_POOL
         .get()
         .ok_or(anyhow::anyhow!("db pool not initialized"))?
         .execute(
-            sqlx::query(r"INSERT INTO devices(id, device_hash, expire) VALUES(?, ?, ?)")
-                .bind(entity.id)
-                .bind(entity.device_hash.clone())
-                .bind(entity.expire),
+            sqlx::query(
+                r#"
+INSERT INTO devices(id, finger_print, expire)
+VALUES (?, ?, ?)
+ON CONFLICT (id) DO UPDATE SET finger_print = excluded.finger_print,
+                               expire       = excluded.expire
+WHERE excluded.expire > devices.expire
+            "#,
+            )
+            .bind(device_id)
+            .bind(device_finger_print)
+            .bind(expire),
         )
         .await
         .map_err(|err| anyhow::anyhow!(err))?;
@@ -106,7 +111,7 @@ pub async fn insert_device(entity: &entities::Device) -> anyhow::Result<()> {
     }
 }
 
-pub async fn update_device_expire(device_id: i64, expire: i32) -> anyhow::Result<()> {
+pub async fn update_device_expire(device_id: u64, expire: i64) -> anyhow::Result<()> {
     let res = DB_POOL
         .get()
         .ok_or(anyhow::anyhow!("db pool not initialized"))?
