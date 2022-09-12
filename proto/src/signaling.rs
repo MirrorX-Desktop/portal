@@ -102,6 +102,8 @@ pub struct KeyExchangeActiveDeviceSecret {
     pub active_exchange_public_key: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="4")]
     pub active_exchange_nonce: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag="5")]
+    pub visit_credentials: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyExchangePassiveDeviceSecret {
