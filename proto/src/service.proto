@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package service;
+
+import "message.proto";
+
+service Signaling {
+    rpc Register (message.RegisterRequest) returns (message.RegisterResponse) {}
+    rpc Heartbeat (message.HeartbeatRequest) returns (message.HeartbeatResponse) {}
+    rpc Visit (message.VisitRequest) returns (message.VisitResponse) {}
+    rpc VisitReply (message.VisitReplyRequest) returns (message.VisitReplyResponse) {}
+    rpc KeyExchange (message.KeyExchangeRequest) returns (message.KeyExchangeResponse) {}
+    rpc KeyExchangeReply (message.KeyExchangeReplyRequest)
+            returns (message.KeyExchangeReplyResponse) {}
+    rpc Subscribe (message.SubscribeRequest) returns (stream message.PublishMessage) {}
+}

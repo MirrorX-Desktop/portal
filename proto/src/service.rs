@@ -1,179 +1,3 @@
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RegisterRequest {
-    #[prost(fixed64, optional, tag="1")]
-    pub device_id: ::core::option::Option<u64>,
-    #[prost(string, tag="2")]
-    pub device_finger_print: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RegisterResponse {
-    #[prost(fixed64, tag="1")]
-    pub device_id: u64,
-    #[prost(sfixed64, tag="2")]
-    pub expire: i64,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct HeartbeatRequest {
-    #[prost(fixed64, tag="1")]
-    pub local_device_id: u64,
-    #[prost(fixed32, tag="2")]
-    pub timestamp: u32,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct HeartbeatResponse {
-    #[prost(fixed32, tag="1")]
-    pub timestamp: u32,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct VisitRequest {
-    #[prost(fixed64, tag="1")]
-    pub active_device_id: u64,
-    #[prost(fixed64, tag="2")]
-    pub passive_device_id: u64,
-    #[prost(enumeration="ResourceType", tag="3")]
-    pub resource_type: i32,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct VisitResponse {
-    #[prost(bool, tag="1")]
-    pub allow: bool,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct VisitReplyRequest {
-    #[prost(fixed64, tag="1")]
-    pub active_device_id: u64,
-    #[prost(fixed64, tag="2")]
-    pub passive_device_id: u64,
-    #[prost(bool, tag="3")]
-    pub allow: bool,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct VisitReplyResponse {
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct KeyExchangeRequest {
-    #[prost(fixed64, tag="1")]
-    pub active_device_id: u64,
-    #[prost(fixed64, tag="2")]
-    pub passive_device_id: u64,
-    #[prost(bytes="vec", tag="3")]
-    pub password_salt: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="4")]
-    pub secret: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="5")]
-    pub secret_nonce: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct KeyExchangeResponse {
-    #[prost(fixed64, tag="1")]
-    pub active_device_id: u64,
-    #[prost(fixed64, tag="2")]
-    pub passive_device_id: u64,
-    #[prost(bytes="vec", tag="3")]
-    pub secret: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct KeyExchangeReplyRequest {
-    #[prost(fixed64, tag="1")]
-    pub active_device_id: u64,
-    #[prost(fixed64, tag="2")]
-    pub passive_device_id: u64,
-    #[prost(oneof="key_exchange_reply_request::KeyExchangeReply", tags="3, 4")]
-    pub key_exchange_reply: ::core::option::Option<key_exchange_reply_request::KeyExchangeReply>,
-}
-/// Nested message and enum types in `KeyExchangeReplyRequest`.
-pub mod key_exchange_reply_request {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum KeyExchangeReply {
-        #[prost(enumeration="super::KeyExchangeReplyError", tag="3")]
-        Error(i32),
-        #[prost(bytes, tag="4")]
-        Secret(::prost::alloc::vec::Vec<u8>),
-    }
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct KeyExchangeReplyResponse {
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct KeyExchangeActiveDeviceSecret {
-    #[prost(bytes="vec", tag="1")]
-    pub exchange_reply_public_key_n: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
-    pub exchange_reply_public_key_e: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
-    pub active_exchange_public_key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="4")]
-    pub active_exchange_nonce: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="5")]
-    pub visit_credentials: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct KeyExchangePassiveDeviceSecret {
-    #[prost(bytes="vec", tag="1")]
-    pub passive_exchange_public_key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
-    pub passive_exchange_nonce: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SubscribeRequest {
-    #[prost(fixed64, tag="1")]
-    pub device_id: u64,
-    #[prost(fixed64, tag="2")]
-    pub device_finger_print: u64,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct PublishMessage {
-    #[prost(oneof="publish_message::Inner", tags="1, 2")]
-    pub inner: ::core::option::Option<publish_message::Inner>,
-}
-/// Nested message and enum types in `PublishMessage`.
-pub mod publish_message {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Inner {
-        #[prost(message, tag="1")]
-        VisitRequest(super::VisitRequest),
-        #[prost(message, tag="2")]
-        KeyExchangeRequest(super::KeyExchangeRequest),
-    }
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum ResourceType {
-    Desktop = 0,
-    Files = 1,
-}
-impl ResourceType {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            ResourceType::Desktop => "RESOURCE_TYPE_DESKTOP",
-            ResourceType::Files => "RESOURCE_TYPE_FILES",
-        }
-    }
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum KeyExchangeReplyError {
-    Internal = 0,
-    InvalidArgs = 1,
-    InvalidPassword = 2,
-}
-impl KeyExchangeReplyError {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            KeyExchangeReplyError::Internal => "KEY_EXCHANGE_REPLY_ERROR_INTERNAL",
-            KeyExchangeReplyError::InvalidArgs => "KEY_EXCHANGE_REPLY_ERROR_INVALID_ARGS",
-            KeyExchangeReplyError::InvalidPassword => "KEY_EXCHANGE_REPLY_ERROR_INVALID_PASSWORD",
-        }
-    }
-}
 /// Generated client implementations.
 pub mod signaling_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
@@ -245,123 +69,9 @@ pub mod signaling_client {
         }
         pub async fn register(
             &mut self,
-            request: impl tonic::IntoRequest<super::RegisterRequest>,
-        ) -> Result<tonic::Response<super::RegisterResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/signaling.Signaling/Register",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn heartbeat(
-            &mut self,
-            request: impl tonic::IntoRequest<super::HeartbeatRequest>,
-        ) -> Result<tonic::Response<super::HeartbeatResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/signaling.Signaling/Heartbeat",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn visit(
-            &mut self,
-            request: impl tonic::IntoRequest<super::VisitRequest>,
-        ) -> Result<tonic::Response<super::VisitResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/signaling.Signaling/Visit",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn visit_reply(
-            &mut self,
-            request: impl tonic::IntoRequest<super::VisitReplyRequest>,
-        ) -> Result<tonic::Response<super::VisitReplyResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/signaling.Signaling/VisitReply",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn key_exchange(
-            &mut self,
-            request: impl tonic::IntoRequest<super::KeyExchangeRequest>,
-        ) -> Result<tonic::Response<super::KeyExchangeResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/signaling.Signaling/KeyExchange",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn key_exchange_reply(
-            &mut self,
-            request: impl tonic::IntoRequest<super::KeyExchangeReplyRequest>,
-        ) -> Result<tonic::Response<super::KeyExchangeReplyResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/signaling.Signaling/KeyExchangeReply",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn subscribe(
-            &mut self,
-            request: impl tonic::IntoRequest<super::SubscribeRequest>,
+            request: impl tonic::IntoRequest<super::super::message::RegisterRequest>,
         ) -> Result<
-            tonic::Response<tonic::codec::Streaming<super::PublishMessage>>,
+            tonic::Response<super::super::message::RegisterResponse>,
             tonic::Status,
         > {
             self.inner
@@ -375,7 +85,141 @@ pub mod signaling_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/signaling.Signaling/Subscribe",
+                "/service.Signaling/Register",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn heartbeat(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::message::HeartbeatRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::HeartbeatResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/service.Signaling/Heartbeat",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn visit(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::message::VisitRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::VisitResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/service.Signaling/Visit");
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn visit_reply(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::message::VisitReplyRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::VisitReplyResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/service.Signaling/VisitReply",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn key_exchange(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::message::KeyExchangeRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::KeyExchangeResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/service.Signaling/KeyExchange",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn key_exchange_reply(
+            &mut self,
+            request: impl tonic::IntoRequest<
+                super::super::message::KeyExchangeReplyRequest,
+            >,
+        ) -> Result<
+            tonic::Response<super::super::message::KeyExchangeReplyResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/service.Signaling/KeyExchangeReply",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn subscribe(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::message::SubscribeRequest>,
+        ) -> Result<
+            tonic::Response<
+                tonic::codec::Streaming<super::super::message::PublishMessage>,
+            >,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/service.Signaling/Subscribe",
             );
             self.inner.server_streaming(request.into_request(), path, codec).await
         }
@@ -390,37 +234,55 @@ pub mod signaling_server {
     pub trait Signaling: Send + Sync + 'static {
         async fn register(
             &self,
-            request: tonic::Request<super::RegisterRequest>,
-        ) -> Result<tonic::Response<super::RegisterResponse>, tonic::Status>;
+            request: tonic::Request<super::super::message::RegisterRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::RegisterResponse>,
+            tonic::Status,
+        >;
         async fn heartbeat(
             &self,
-            request: tonic::Request<super::HeartbeatRequest>,
-        ) -> Result<tonic::Response<super::HeartbeatResponse>, tonic::Status>;
+            request: tonic::Request<super::super::message::HeartbeatRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::HeartbeatResponse>,
+            tonic::Status,
+        >;
         async fn visit(
             &self,
-            request: tonic::Request<super::VisitRequest>,
-        ) -> Result<tonic::Response<super::VisitResponse>, tonic::Status>;
+            request: tonic::Request<super::super::message::VisitRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::VisitResponse>,
+            tonic::Status,
+        >;
         async fn visit_reply(
             &self,
-            request: tonic::Request<super::VisitReplyRequest>,
-        ) -> Result<tonic::Response<super::VisitReplyResponse>, tonic::Status>;
+            request: tonic::Request<super::super::message::VisitReplyRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::VisitReplyResponse>,
+            tonic::Status,
+        >;
         async fn key_exchange(
             &self,
-            request: tonic::Request<super::KeyExchangeRequest>,
-        ) -> Result<tonic::Response<super::KeyExchangeResponse>, tonic::Status>;
+            request: tonic::Request<super::super::message::KeyExchangeRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::KeyExchangeResponse>,
+            tonic::Status,
+        >;
         async fn key_exchange_reply(
             &self,
-            request: tonic::Request<super::KeyExchangeReplyRequest>,
-        ) -> Result<tonic::Response<super::KeyExchangeReplyResponse>, tonic::Status>;
+            request: tonic::Request<super::super::message::KeyExchangeReplyRequest>,
+        ) -> Result<
+            tonic::Response<super::super::message::KeyExchangeReplyResponse>,
+            tonic::Status,
+        >;
         ///Server streaming response type for the Subscribe method.
         type SubscribeStream: futures_core::Stream<
-                Item = Result<super::PublishMessage, tonic::Status>,
+                Item = Result<super::super::message::PublishMessage, tonic::Status>,
             >
             + Send
             + 'static;
         async fn subscribe(
             &self,
-            request: tonic::Request<super::SubscribeRequest>,
+            request: tonic::Request<super::super::message::SubscribeRequest>,
         ) -> Result<tonic::Response<Self::SubscribeStream>, tonic::Status>;
     }
     #[derive(Debug)]
@@ -482,21 +344,23 @@ pub mod signaling_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/signaling.Signaling/Register" => {
+                "/service.Signaling/Register" => {
                     #[allow(non_camel_case_types)]
                     struct RegisterSvc<T: Signaling>(pub Arc<T>);
                     impl<
                         T: Signaling,
-                    > tonic::server::UnaryService<super::RegisterRequest>
+                    > tonic::server::UnaryService<super::super::message::RegisterRequest>
                     for RegisterSvc<T> {
-                        type Response = super::RegisterResponse;
+                        type Response = super::super::message::RegisterResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::RegisterRequest>,
+                            request: tonic::Request<
+                                super::super::message::RegisterRequest,
+                            >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move { (*inner).register(request).await };
@@ -520,21 +384,24 @@ pub mod signaling_server {
                     };
                     Box::pin(fut)
                 }
-                "/signaling.Signaling/Heartbeat" => {
+                "/service.Signaling/Heartbeat" => {
                     #[allow(non_camel_case_types)]
                     struct HeartbeatSvc<T: Signaling>(pub Arc<T>);
                     impl<
                         T: Signaling,
-                    > tonic::server::UnaryService<super::HeartbeatRequest>
-                    for HeartbeatSvc<T> {
-                        type Response = super::HeartbeatResponse;
+                    > tonic::server::UnaryService<
+                        super::super::message::HeartbeatRequest,
+                    > for HeartbeatSvc<T> {
+                        type Response = super::super::message::HeartbeatResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::HeartbeatRequest>,
+                            request: tonic::Request<
+                                super::super::message::HeartbeatRequest,
+                            >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move { (*inner).heartbeat(request).await };
@@ -558,19 +425,21 @@ pub mod signaling_server {
                     };
                     Box::pin(fut)
                 }
-                "/signaling.Signaling/Visit" => {
+                "/service.Signaling/Visit" => {
                     #[allow(non_camel_case_types)]
                     struct VisitSvc<T: Signaling>(pub Arc<T>);
-                    impl<T: Signaling> tonic::server::UnaryService<super::VisitRequest>
+                    impl<
+                        T: Signaling,
+                    > tonic::server::UnaryService<super::super::message::VisitRequest>
                     for VisitSvc<T> {
-                        type Response = super::VisitResponse;
+                        type Response = super::super::message::VisitResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::VisitRequest>,
+                            request: tonic::Request<super::super::message::VisitRequest>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move { (*inner).visit(request).await };
@@ -594,21 +463,24 @@ pub mod signaling_server {
                     };
                     Box::pin(fut)
                 }
-                "/signaling.Signaling/VisitReply" => {
+                "/service.Signaling/VisitReply" => {
                     #[allow(non_camel_case_types)]
                     struct VisitReplySvc<T: Signaling>(pub Arc<T>);
                     impl<
                         T: Signaling,
-                    > tonic::server::UnaryService<super::VisitReplyRequest>
-                    for VisitReplySvc<T> {
-                        type Response = super::VisitReplyResponse;
+                    > tonic::server::UnaryService<
+                        super::super::message::VisitReplyRequest,
+                    > for VisitReplySvc<T> {
+                        type Response = super::super::message::VisitReplyResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::VisitReplyRequest>,
+                            request: tonic::Request<
+                                super::super::message::VisitReplyRequest,
+                            >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move { (*inner).visit_reply(request).await };
@@ -632,21 +504,24 @@ pub mod signaling_server {
                     };
                     Box::pin(fut)
                 }
-                "/signaling.Signaling/KeyExchange" => {
+                "/service.Signaling/KeyExchange" => {
                     #[allow(non_camel_case_types)]
                     struct KeyExchangeSvc<T: Signaling>(pub Arc<T>);
                     impl<
                         T: Signaling,
-                    > tonic::server::UnaryService<super::KeyExchangeRequest>
-                    for KeyExchangeSvc<T> {
-                        type Response = super::KeyExchangeResponse;
+                    > tonic::server::UnaryService<
+                        super::super::message::KeyExchangeRequest,
+                    > for KeyExchangeSvc<T> {
+                        type Response = super::super::message::KeyExchangeResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::KeyExchangeRequest>,
+                            request: tonic::Request<
+                                super::super::message::KeyExchangeRequest,
+                            >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
@@ -672,21 +547,24 @@ pub mod signaling_server {
                     };
                     Box::pin(fut)
                 }
-                "/signaling.Signaling/KeyExchangeReply" => {
+                "/service.Signaling/KeyExchangeReply" => {
                     #[allow(non_camel_case_types)]
                     struct KeyExchangeReplySvc<T: Signaling>(pub Arc<T>);
                     impl<
                         T: Signaling,
-                    > tonic::server::UnaryService<super::KeyExchangeReplyRequest>
-                    for KeyExchangeReplySvc<T> {
-                        type Response = super::KeyExchangeReplyResponse;
+                    > tonic::server::UnaryService<
+                        super::super::message::KeyExchangeReplyRequest,
+                    > for KeyExchangeReplySvc<T> {
+                        type Response = super::super::message::KeyExchangeReplyResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::KeyExchangeReplyRequest>,
+                            request: tonic::Request<
+                                super::super::message::KeyExchangeReplyRequest,
+                            >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
@@ -712,14 +590,15 @@ pub mod signaling_server {
                     };
                     Box::pin(fut)
                 }
-                "/signaling.Signaling/Subscribe" => {
+                "/service.Signaling/Subscribe" => {
                     #[allow(non_camel_case_types)]
                     struct SubscribeSvc<T: Signaling>(pub Arc<T>);
                     impl<
                         T: Signaling,
-                    > tonic::server::ServerStreamingService<super::SubscribeRequest>
-                    for SubscribeSvc<T> {
-                        type Response = super::PublishMessage;
+                    > tonic::server::ServerStreamingService<
+                        super::super::message::SubscribeRequest,
+                    > for SubscribeSvc<T> {
+                        type Response = super::super::message::PublishMessage;
                         type ResponseStream = T::SubscribeStream;
                         type Future = BoxFuture<
                             tonic::Response<Self::ResponseStream>,
@@ -727,7 +606,9 @@ pub mod signaling_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::SubscribeRequest>,
+                            request: tonic::Request<
+                                super::super::message::SubscribeRequest,
+                            >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move { (*inner).subscribe(request).await };
@@ -787,6 +668,6 @@ pub mod signaling_server {
         }
     }
     impl<T: Signaling> tonic::server::NamedService for SignalingServer<T> {
-        const NAME: &'static str = "signaling.Signaling";
+        const NAME: &'static str = "service.Signaling";
     }
 }

@@ -4,13 +4,16 @@ mod handlers;
 
 use crate::handlers::SignalingService;
 use config::CONFIG;
-use signaling_proto::signaling_server::SignalingServer;
+use signaling_proto::service::signaling_server::SignalingServer;
 use std::time::Duration;
 use tonic::{codegen::CompressionEncoding, transport::server::TcpIncoming, transport::Server};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    db::init(&CONFIG.db.uri).await?;
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
+
     db::ensure_schema().await?;
 
     let incoming = TcpIncoming::new(
@@ -25,6 +28,7 @@ async fn main() -> anyhow::Result<()> {
         .send_compressed(CompressionEncoding::Gzip);
 
     Server::builder()
+        .trace_fn(|_| tracing::info_span!("signaling-service"))
         .add_service(service)
         .serve_with_incoming_shutdown(incoming, async {
             let _ = tokio::signal::ctrl_c().await;

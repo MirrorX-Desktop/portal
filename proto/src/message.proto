@@ -1,27 +1,16 @@
 syntax = "proto3";
 
-package signaling;
-
-service Signaling {
-    rpc Register (RegisterRequest) returns (RegisterResponse) {}
-    rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse) {}
-    rpc Visit (VisitRequest) returns (VisitResponse) {}
-    rpc VisitReply (VisitReplyRequest) returns (VisitReplyResponse) {}
-    rpc KeyExchange (KeyExchangeRequest) returns (KeyExchangeResponse) {}
-    rpc KeyExchangeReply (KeyExchangeReplyRequest)
-            returns (KeyExchangeReplyResponse) {}
-    rpc Subscribe (SubscribeRequest) returns (stream PublishMessage) {}
-}
+package message;
 
 message RegisterRequest {
-    optional fixed64 device_id = 1;
+    optional sfixed64 device_id = 1;
     string device_finger_print = 2;
 }
 
-message RegisterResponse {fixed64 device_id = 1;sfixed64 expire = 2;}
+message RegisterResponse {sfixed64 device_id = 1;sfixed64 expire = 2;}
 
 message HeartbeatRequest {
-    fixed64 local_device_id = 1;
+    sfixed64 device_id = 1;
     fixed32 timestamp = 2;
 }
 
@@ -33,32 +22,32 @@ enum ResourceType {
 }
 
 message VisitRequest {
-    fixed64 active_device_id = 1;
-    fixed64 passive_device_id = 2;
+    sfixed64 active_device_id = 1;
+    sfixed64 passive_device_id = 2;
     ResourceType resource_type = 3;
 }
 
 message VisitResponse {bool allow = 1;}
 
 message VisitReplyRequest {
-    fixed64 active_device_id = 1;
-    fixed64 passive_device_id = 2;
+    sfixed64 active_device_id = 1;
+    sfixed64 passive_device_id = 2;
     bool allow = 3;
 }
 
 message VisitReplyResponse {}
 
 message KeyExchangeRequest {
-    fixed64 active_device_id = 1;
-    fixed64 passive_device_id = 2;
+    sfixed64 active_device_id = 1;
+    sfixed64 passive_device_id = 2;
     bytes password_salt = 3;
     bytes secret = 4;
     bytes secret_nonce = 5;
 }
 
 message KeyExchangeResponse {
-    fixed64 active_device_id = 1;
-    fixed64 passive_device_id = 2;
+    sfixed64 active_device_id = 1;
+    sfixed64 passive_device_id = 2;
     bytes secret = 3;
 }
 
@@ -69,8 +58,8 @@ enum KeyExchangeReplyError {
 }
 
 message KeyExchangeReplyRequest {
-    fixed64 active_device_id = 1;
-    fixed64 passive_device_id = 2;
+    sfixed64 active_device_id = 1;
+    sfixed64 passive_device_id = 2;
     oneof key_exchange_reply {
         KeyExchangeReplyError error = 3;
         bytes secret = 4;
@@ -93,12 +82,12 @@ message KeyExchangePassiveDeviceSecret {
 }
 
 message SubscribeRequest {
-    fixed64 device_id = 1;
-    fixed64 device_finger_print = 2;
+    sfixed64 device_id = 1;
+    string device_finger_print = 2;
 }
 
 message PublishMessage {
-    oneof inner {
+    oneof inner_publish_message {
         VisitRequest visit_request = 1;
         KeyExchangeRequest key_exchange_request = 2;
     }
