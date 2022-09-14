@@ -15,6 +15,7 @@ use crate::handlers::{
     visit::handle_visit,
 };
 use dashmap::DashMap;
+use futures::Stream;
 use once_cell::sync::Lazy;
 use prost_reflect::{DynamicMessage, ReflectMessage};
 use scopeguard::defer;
@@ -28,8 +29,7 @@ use signaling_proto::{
     service::signaling_server::Signaling,
 };
 use std::time::Duration;
-use tokio::sync::mpsc::Sender;
-use tokio_stream::wrappers::ReceiverStream;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tonic::{Request, Response, Status};
 
 static CLIENTS: Lazy<DashMap<i64, Client>> = Lazy::new(DashMap::new);
@@ -93,7 +93,7 @@ impl Signaling for SignalingService {
         handle_key_exchange_reply(req).await.map(Response::new)
     }
 
-    type SubscribeStream = ReceiverStream<Result<PublishMessage, tonic::Status>>;
+    type SubscribeStream = ObserveStream<Result<PublishMessage, tonic::Status>>;
 
     #[tracing::instrument]
     async fn subscribe(
@@ -103,7 +103,7 @@ impl Signaling for SignalingService {
         let req = request.into_inner();
         handle_subscribe(req)
             .await
-            .map(|rx| Response::new(ReceiverStream::new(rx)))
+            .map(|(device_id, rx)| Response::new(ObserveStream::new(device_id, rx)))
     }
 }
 
@@ -208,5 +208,37 @@ impl Client {
 
         resp.transcode_to::<ResponseMessage>()
             .map_err(|_| Status::internal("internal incorrect message dispatch"))
+    }
+}
+
+pub struct ObserveStream<T> {
+    device_id: i64,
+    inner: Receiver<T>,
+}
+
+impl<T> ObserveStream<T> {
+    pub fn new(device_id: i64, receiver: Receiver<T>) -> Self {
+        ObserveStream {
+            device_id,
+            inner: receiver,
+        }
+    }
+}
+
+impl<T> Stream for ObserveStream<T> {
+    type Item = T;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.inner.poll_recv(cx)
+    }
+}
+
+impl<T> Drop for ObserveStream<T> {
+    fn drop(&mut self) {
+        let _ = CLIENTS.remove(&self.device_id);
+        tracing::debug!(device_id = self.device_id, "client drop");
     }
 }

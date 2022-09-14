@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
         .send_compressed(CompressionEncoding::Gzip);
 
     Server::builder()
-        .trace_fn(|_| tracing::debug_span!("signaling-service"))
+        .trace_fn(|_| tracing::info_span!("signaling-service"))
         .add_service(service)
         .serve_with_incoming_shutdown(incoming, async {
             let _ = tokio::signal::ctrl_c().await;
