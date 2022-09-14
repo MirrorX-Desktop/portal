@@ -17,7 +17,7 @@ pub async fn handle_subscribe(
     }
 
     let (tx, rx) = channel(16);
-    let client = Client::new(req.device_id, req.device_finger_print, tx);
+    let client = Client::new(req.device_id, tx);
 
     let _ = SUBSCRIBE_INSERT_MUTEX.lock().await;
 

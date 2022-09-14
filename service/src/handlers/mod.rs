@@ -1,24 +1,34 @@
 mod heartbeat;
+mod key_exchange;
+mod key_exchange_reply;
 mod register;
 mod subscribe;
 mod visit;
+mod visit_reply;
 
-use crate::handlers::heartbeat::handle_heartbeat;
-use crate::handlers::register::handle_register;
-use crate::handlers::subscribe::handle_subscribe;
-use crate::handlers::visit::handle_visit;
+use self::{
+    key_exchange::handle_key_exchange, key_exchange_reply::handle_key_exchange_reply,
+    visit_reply::handle_visit_reply,
+};
+use crate::handlers::{
+    heartbeat::handle_heartbeat, register::handle_register, subscribe::handle_subscribe,
+    visit::handle_visit,
+};
 use dashmap::DashMap;
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
-use prost_reflect::ReflectMessage;
-use signaling_proto::message::publish_message::InnerPublishMessage;
-use signaling_proto::message::{
-    HeartbeatRequest, HeartbeatResponse, KeyExchangeReplyRequest, KeyExchangeReplyResponse,
-    KeyExchangeRequest, KeyExchangeResponse, PublishMessage, RegisterRequest, RegisterResponse,
-    SubscribeRequest, VisitReplyRequest, VisitReplyResponse, VisitRequest, VisitResponse,
+use prost::Message;
+use prost_reflect::{DynamicMessage, ReflectMessage};
+use scopeguard::defer;
+use signaling_proto::{
+    message::{
+        publish_message::InnerPublishMessage, HeartbeatRequest, HeartbeatResponse,
+        KeyExchangeReplyRequest, KeyExchangeReplyResponse, KeyExchangeRequest, KeyExchangeResponse,
+        PublishMessage, RegisterRequest, RegisterResponse, SubscribeRequest, VisitReplyRequest,
+        VisitReplyResponse, VisitRequest, VisitResponse,
+    },
+    service::signaling_server::Signaling,
 };
-use signaling_proto::service::signaling_server::Signaling;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
@@ -61,21 +71,24 @@ impl Signaling for SignalingService {
         &self,
         request: Request<VisitReplyRequest>,
     ) -> Result<Response<VisitReplyResponse>, Status> {
-        todo!()
+        let req = request.into_inner();
+        handle_visit_reply(req).await.map(Response::new)
     }
 
     async fn key_exchange(
         &self,
         request: Request<KeyExchangeRequest>,
     ) -> Result<Response<KeyExchangeResponse>, Status> {
-        todo!()
+        let req = request.into_inner();
+        handle_key_exchange(req).await.map(Response::new)
     }
 
     async fn key_exchange_reply(
         &self,
         request: Request<KeyExchangeReplyRequest>,
     ) -> Result<Response<KeyExchangeReplyResponse>, Status> {
-        todo!()
+        let req = request.into_inner();
+        handle_key_exchange_reply(req).await.map(Response::new)
     }
 
     type SubscribeStream = ReceiverStream<Result<PublishMessage, tonic::Status>>;
@@ -93,49 +106,81 @@ impl Signaling for SignalingService {
 
 struct Client {
     device_id: i64,
-    finger_print: String,
     tx: Sender<Result<PublishMessage, Status>>,
-    call_tx_map: Cache<(i64, String), Arc<tokio::sync::oneshot::Sender<InnerPublishMessage>>>,
+    call_tx_map: DashMap<(i64, String), Sender<DynamicMessage>>,
 }
 
 impl Client {
-    pub fn new(
-        device_id: i64,
-        finger_print: String,
-        tx: Sender<Result<PublishMessage, Status>>,
-    ) -> Self {
-        let call_tx_map = Cache::builder()
-            .time_to_live(Duration::from_secs(60 * 3))
-            .build();
-
+    pub fn new(device_id: i64, tx: Sender<Result<PublishMessage, Status>>) -> Self {
         Client {
             device_id,
-            finger_print,
             tx,
-            call_tx_map,
+            call_tx_map: DashMap::new(),
         }
     }
 
-    // pub async fn call_visit_request(&self, message: VisitRequest) -> Result<VisitResponse, Status> {
-    //     let message_name = message.descriptor().full_name().to_string();
-    //
-    //     let publish_message = PublishMessage {
-    //         inner_publish_message: Some(InnerPublishMessage::VisitRequest(message)),
-    //     };
-    //
-    //     let (tx, rx) = tokio::sync::oneshot::channel();
-    //
-    //     self.call_tx_map
-    //         .insert((self.device_id, message_name), Arc::new(tx));
-    //
-    //     todo!()
-    // }
+    pub async fn call_visit_request(
+        &self,
+        caller_device_id: i64,
+        message: VisitRequest,
+    ) -> Result<VisitResponse, Status> {
+        self.publish_message(
+            caller_device_id,
+            PublishMessage {
+                inner_publish_message: Some(InnerPublishMessage::VisitRequest(message)),
+            },
+        )
+        .await
+    }
 
-    pub async fn push(&self, message: Result<PublishMessage, Status>) -> Result<(), Status> {
-        self.tx.send(message).await.map_err(|err| {
+    pub async fn call_key_exchange_request(
+        &self,
+        caller_device_id: i64,
+        message: KeyExchangeRequest,
+    ) -> Result<KeyExchangeResponse, Status> {
+        self.publish_message(
+            caller_device_id,
+            PublishMessage {
+                inner_publish_message: Some(InnerPublishMessage::KeyExchangeRequest(message)),
+            },
+        )
+        .await
+    }
+
+    async fn publish_message<ResponseMessage>(
+        &self,
+        caller_device_id: i64,
+        message: PublishMessage,
+    ) -> Result<ResponseMessage, Status>
+    where
+        ResponseMessage: Message + Default,
+    {
+        let message_name = message.descriptor().full_name().to_string();
+        let tx_key = (caller_device_id, message_name.to_owned());
+
+        if self.call_tx_map.contains_key(&tx_key) {
+            return Err(Status::already_exists("disallow repeat request"));
+        }
+
+        let (resp_tx, mut resp_rx) = tokio::sync::mpsc::channel(1);
+
+        self.call_tx_map.insert(tx_key, resp_tx);
+        defer! {
+            self.call_tx_map.remove(&(caller_device_id, message_name.to_owned()));
+        }
+
+        self.tx.send(Ok(message)).await.map_err(|err| {
             let device_id = self.device_id;
-            tracing::error!(?device_id, ?err, "push message failed");
+            tracing::error!(?device_id, ?err, "publish message failed");
             Status::internal("signaling exchange message failed")
-        })
+        })?;
+
+        let resp = tokio::time::timeout(Duration::from_secs(60), resp_rx.recv())
+            .await
+            .map_err(|_| Status::deadline_exceeded("request timeout"))?
+            .ok_or_else(|| Status::deadline_exceeded("request timeout"))?;
+
+        resp.transcode_to::<ResponseMessage>()
+            .map_err(|_| Status::internal("internal incorrect message dispatch"))
     }
 }

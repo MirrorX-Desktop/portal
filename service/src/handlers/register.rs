@@ -12,7 +12,7 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
             ));
         }
 
-        let entity = crate::db::query_device_by_id(device_id)
+        let entity = crate::db::device::query_device_by_id(device_id)
             .await
             .map_err(|err| {
                 tracing::error!(?err, "query_device_by_id");
@@ -25,7 +25,9 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
                 && req.device_finger_print == entity.finger_print
             {
                 let new_expire = (chrono::Utc::now() + chrono::Duration::days(90)).timestamp();
-                if let Err(err) = crate::db::update_device_expire(device_id, new_expire).await {
+                if let Err(err) =
+                    crate::db::device::update_device_expire(device_id, new_expire).await
+                {
                     tracing::error!(?err, "update_device_expire");
                     return Err(Status::internal("internal database query error"));
                 }
@@ -38,13 +40,34 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
         }
     }
 
+    if let Some(entity) = crate::db::device::query_device_by_finger_print(&req.device_finger_print)
+        .await
+        .map_err(|err| {
+            tracing::error!(?err, "query_device_by_finger_print");
+            Status::internal("internal database query error")
+        })?
+    {
+        if entity.expire > chrono::Utc::now().timestamp() {
+            let new_expire = (chrono::Utc::now() + chrono::Duration::days(90)).timestamp();
+            if let Err(err) = crate::db::device::update_device_expire(entity.id, new_expire).await {
+                tracing::error!(?err, "update_device_expire");
+                return Err(Status::internal("internal database query error"));
+            }
+
+            return Ok(RegisterResponse {
+                device_id: entity.id,
+                expire: new_expire,
+            });
+        }
+    };
+
     let device_id_range = Uniform::from(100000001..=8999999999);
     let reserve_device_ids: Vec<i64> = rand::thread_rng()
         .sample_iter(device_id_range)
         .take(100)
         .collect();
 
-    let non_available_device_ids = crate::db::query_device_non_available_ids(
+    let non_available_device_ids = crate::db::device::query_device_non_available_ids(
         &reserve_device_ids,
         chrono::Utc::now().timestamp(),
     )
@@ -62,7 +85,9 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
     for device_id in available_device_ids {
         let expire = (chrono::Utc::now() + chrono::Duration::days(90)).timestamp();
 
-        if (crate::db::insert_device(device_id, &req.device_finger_print, expire).await).is_ok() {
+        if (crate::db::device::insert_device(device_id, &req.device_finger_print, expire).await)
+            .is_ok()
+        {
             return Ok(RegisterResponse { device_id, expire });
         }
     }

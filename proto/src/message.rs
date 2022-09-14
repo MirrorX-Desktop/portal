@@ -89,8 +89,25 @@ pub struct KeyExchangeResponse {
     pub active_device_id: i64,
     #[prost(sfixed64, tag="2")]
     pub passive_device_id: i64,
-    #[prost(bytes="vec", tag="3")]
-    pub secret: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag="3")]
+    pub key_exchange_result: ::core::option::Option<KeyExchangeResult>,
+}
+#[derive(::prost_reflect::ReflectMessage)]
+#[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.KeyExchangeResult")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct KeyExchangeResult {
+    #[prost(oneof="key_exchange_result::InnerKeyExchangeResult", tags="1, 2")]
+    pub inner_key_exchange_result: ::core::option::Option<key_exchange_result::InnerKeyExchangeResult>,
+}
+/// Nested message and enum types in `KeyExchangeResult`.
+pub mod key_exchange_result {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum InnerKeyExchangeResult {
+        #[prost(enumeration="super::KeyExchangeReplyError", tag="1")]
+        Error(i32),
+        #[prost(bytes, tag="2")]
+        Secret(::prost::alloc::vec::Vec<u8>),
+    }
 }
 #[derive(::prost_reflect::ReflectMessage)]
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.KeyExchangeReplyRequest")]
@@ -100,18 +117,8 @@ pub struct KeyExchangeReplyRequest {
     pub active_device_id: i64,
     #[prost(sfixed64, tag="2")]
     pub passive_device_id: i64,
-    #[prost(oneof="key_exchange_reply_request::KeyExchangeReply", tags="3, 4")]
-    pub key_exchange_reply: ::core::option::Option<key_exchange_reply_request::KeyExchangeReply>,
-}
-/// Nested message and enum types in `KeyExchangeReplyRequest`.
-pub mod key_exchange_reply_request {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum KeyExchangeReply {
-        #[prost(enumeration="super::KeyExchangeReplyError", tag="3")]
-        Error(i32),
-        #[prost(bytes, tag="4")]
-        Secret(::prost::alloc::vec::Vec<u8>),
-    }
+    #[prost(message, optional, tag="3")]
+    pub key_exchange_result: ::core::option::Option<KeyExchangeResult>,
 }
 #[derive(::prost_reflect::ReflectMessage)]
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.KeyExchangeReplyResponse")]
