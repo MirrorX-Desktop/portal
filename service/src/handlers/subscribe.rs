@@ -7,6 +7,7 @@ use tonic::Status;
 
 static SUBSCRIBE_INSERT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 
+#[tracing::instrument]
 pub async fn handle_subscribe(
     req: SubscribeRequest,
 ) -> Result<Receiver<Result<PublishMessage, Status>>, Status> {

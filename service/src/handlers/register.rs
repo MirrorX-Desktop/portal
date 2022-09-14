@@ -4,6 +4,7 @@ use rand::Rng;
 use signaling_proto::message::{RegisterRequest, RegisterResponse};
 use tonic::Status;
 
+#[tracing::instrument]
 pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, Status> {
     if let Some(device_id) = req.device_id {
         if CLIENTS.contains_key(&device_id) {

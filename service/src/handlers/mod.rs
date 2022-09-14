@@ -15,9 +15,7 @@ use crate::handlers::{
     visit::handle_visit,
 };
 use dashmap::DashMap;
-use moka::sync::Cache;
 use once_cell::sync::Lazy;
-use prost::Message;
 use prost_reflect::{DynamicMessage, ReflectMessage};
 use scopeguard::defer;
 use signaling_proto::{
@@ -59,6 +57,7 @@ impl Signaling for SignalingService {
         handle_heartbeat(req).await.map(Response::new)
     }
 
+    #[tracing::instrument]
     async fn visit(
         &self,
         request: Request<VisitRequest>,
@@ -67,6 +66,7 @@ impl Signaling for SignalingService {
         handle_visit(req).await.map(Response::new)
     }
 
+    #[tracing::instrument]
     async fn visit_reply(
         &self,
         request: Request<VisitReplyRequest>,
@@ -75,6 +75,7 @@ impl Signaling for SignalingService {
         handle_visit_reply(req).await.map(Response::new)
     }
 
+    #[tracing::instrument]
     async fn key_exchange(
         &self,
         request: Request<KeyExchangeRequest>,
@@ -83,6 +84,7 @@ impl Signaling for SignalingService {
         handle_key_exchange(req).await.map(Response::new)
     }
 
+    #[tracing::instrument]
     async fn key_exchange_reply(
         &self,
         request: Request<KeyExchangeReplyRequest>,
@@ -93,6 +95,7 @@ impl Signaling for SignalingService {
 
     type SubscribeStream = ReceiverStream<Result<PublishMessage, tonic::Status>>;
 
+    #[tracing::instrument]
     async fn subscribe(
         &self,
         request: Request<SubscribeRequest>,
@@ -107,7 +110,7 @@ impl Signaling for SignalingService {
 struct Client {
     device_id: i64,
     tx: Sender<Result<PublishMessage, Status>>,
-    call_tx_map: DashMap<(i64, String), Sender<DynamicMessage>>,
+    call_tx_map: DashMap<(i64, String), tokio::sync::oneshot::Sender<DynamicMessage>>,
 }
 
 impl Client {
@@ -147,26 +150,49 @@ impl Client {
         .await
     }
 
+    async fn reply_call<ResponseMessage>(&self, reply_for_device_id: i64, message: ResponseMessage)
+    where
+        ResponseMessage: ReflectMessage,
+    {
+        let tx_key = (
+            reply_for_device_id,
+            message.descriptor().full_name().to_owned(),
+        );
+
+        if let Some((_, tx)) = self.call_tx_map.remove(&tx_key) {
+            if tx.send(message.transcode_to_dynamic()).is_err() {
+                tracing::warn!(?tx_key, "tx send failed");
+            }
+        } else {
+            tracing::warn!(?tx_key, "reply tx not exists");
+        }
+    }
+
     async fn publish_message<ResponseMessage>(
         &self,
         caller_device_id: i64,
         message: PublishMessage,
     ) -> Result<ResponseMessage, Status>
     where
-        ResponseMessage: Message + Default,
+        ResponseMessage: ReflectMessage + Default,
     {
-        let message_name = message.descriptor().full_name().to_string();
-        let tx_key = (caller_device_id, message_name.to_owned());
+        let response_message_name = ResponseMessage::default()
+            .descriptor()
+            .full_name()
+            .to_string();
+
+        let tx_key = (caller_device_id, response_message_name.to_owned());
 
         if self.call_tx_map.contains_key(&tx_key) {
             return Err(Status::already_exists("disallow repeat request"));
         }
 
-        let (resp_tx, mut resp_rx) = tokio::sync::mpsc::channel(1);
+        let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
 
-        self.call_tx_map.insert(tx_key, resp_tx);
+        self.call_tx_map.insert(tx_key.clone(), resp_tx);
+
         defer! {
-            self.call_tx_map.remove(&(caller_device_id, message_name.to_owned()));
+            self.call_tx_map.remove(&tx_key);
         }
 
         self.tx.send(Ok(message)).await.map_err(|err| {
@@ -175,10 +201,10 @@ impl Client {
             Status::internal("signaling exchange message failed")
         })?;
 
-        let resp = tokio::time::timeout(Duration::from_secs(60), resp_rx.recv())
+        let resp = tokio::time::timeout(Duration::from_secs(60), resp_rx)
             .await
             .map_err(|_| Status::deadline_exceeded("request timeout"))?
-            .ok_or_else(|| Status::deadline_exceeded("request timeout"))?;
+            .map_err(|_| Status::deadline_exceeded("request timeout"))?;
 
         resp.transcode_to::<ResponseMessage>()
             .map_err(|_| Status::internal("internal incorrect message dispatch"))
