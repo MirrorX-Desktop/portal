@@ -66,7 +66,7 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
         }
     };
 
-    let device_id_range = Uniform::from(100000001..=8999999999);
+    let device_id_range = Uniform::from(1000000001..9999999999);
     let reserve_device_ids: Vec<i64> = rand::thread_rng()
         .sample_iter(device_id_range)
         .take(100)
