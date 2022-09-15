@@ -36,29 +36,35 @@ pub struct HeartbeatResponse {
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.VisitRequest")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VisitRequest {
-    #[prost(sfixed64, tag="1")]
-    pub active_device_id: i64,
+    #[prost(string, tag="1")]
+    pub domain: ::prost::alloc::string::String,
     #[prost(sfixed64, tag="2")]
+    pub active_device_id: i64,
+    #[prost(sfixed64, tag="3")]
     pub passive_device_id: i64,
-    #[prost(enumeration="ResourceType", tag="3")]
+    #[prost(enumeration="ResourceType", tag="4")]
     pub resource_type: i32,
 }
 #[derive(::prost_reflect::ReflectMessage)]
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.VisitResponse")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VisitResponse {
-    #[prost(bool, tag="1")]
+    #[prost(string, tag="1")]
+    pub domain: ::prost::alloc::string::String,
+    #[prost(bool, tag="2")]
     pub allow: bool,
 }
 #[derive(::prost_reflect::ReflectMessage)]
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.VisitReplyRequest")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VisitReplyRequest {
-    #[prost(sfixed64, tag="1")]
-    pub active_device_id: i64,
+    #[prost(string, tag="1")]
+    pub domain: ::prost::alloc::string::String,
     #[prost(sfixed64, tag="2")]
+    pub active_device_id: i64,
+    #[prost(sfixed64, tag="3")]
     pub passive_device_id: i64,
-    #[prost(bool, tag="3")]
+    #[prost(bool, tag="4")]
     pub allow: bool,
 }
 #[derive(::prost_reflect::ReflectMessage)]
@@ -70,26 +76,30 @@ pub struct VisitReplyResponse {
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.KeyExchangeRequest")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyExchangeRequest {
-    #[prost(sfixed64, tag="1")]
-    pub active_device_id: i64,
+    #[prost(string, tag="1")]
+    pub domain: ::prost::alloc::string::String,
     #[prost(sfixed64, tag="2")]
+    pub active_device_id: i64,
+    #[prost(sfixed64, tag="3")]
     pub passive_device_id: i64,
-    #[prost(bytes="vec", tag="3")]
-    pub password_salt: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="4")]
-    pub secret: ::prost::alloc::vec::Vec<u8>,
+    pub password_salt: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="5")]
+    pub secret: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes="vec", tag="6")]
     pub secret_nonce: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::prost_reflect::ReflectMessage)]
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.KeyExchangeResponse")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyExchangeResponse {
-    #[prost(sfixed64, tag="1")]
-    pub active_device_id: i64,
+    #[prost(string, tag="1")]
+    pub domain: ::prost::alloc::string::String,
     #[prost(sfixed64, tag="2")]
+    pub active_device_id: i64,
+    #[prost(sfixed64, tag="3")]
     pub passive_device_id: i64,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag="4")]
     pub key_exchange_result: ::core::option::Option<KeyExchangeResult>,
 }
 #[derive(::prost_reflect::ReflectMessage)]
@@ -113,11 +123,13 @@ pub mod key_exchange_result {
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.KeyExchangeReplyRequest")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyExchangeReplyRequest {
-    #[prost(sfixed64, tag="1")]
-    pub active_device_id: i64,
+    #[prost(string, tag="1")]
+    pub domain: ::prost::alloc::string::String,
     #[prost(sfixed64, tag="2")]
+    pub active_device_id: i64,
+    #[prost(sfixed64, tag="3")]
     pub passive_device_id: i64,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag="4")]
     pub key_exchange_result: ::core::option::Option<KeyExchangeResult>,
 }
 #[derive(::prost_reflect::ReflectMessage)]
