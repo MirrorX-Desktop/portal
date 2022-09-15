@@ -11,9 +11,11 @@ pub struct RegisterRequest {
 #[prost_reflect(descriptor_pool = "crate::DESCRIPTOR_POOL", message_name = "message.RegisterResponse")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RegisterResponse {
-    #[prost(sfixed64, tag="1")]
-    pub device_id: i64,
+    #[prost(string, tag="1")]
+    pub domain: ::prost::alloc::string::String,
     #[prost(sfixed64, tag="2")]
+    pub device_id: i64,
+    #[prost(sfixed64, tag="3")]
     pub expire: i64,
 }
 #[derive(::prost_reflect::ReflectMessage)]

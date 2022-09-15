@@ -8,8 +8,9 @@ message RegisterRequest {
 }
 
 message RegisterResponse {
-  sfixed64 device_id = 1;
-  sfixed64 expire = 2;
+  string domain = 1;
+  sfixed64 device_id = 2;
+  sfixed64 expire = 3;
 }
 
 message HeartbeatRequest {
