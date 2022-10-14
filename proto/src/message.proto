@@ -13,13 +13,6 @@ message RegisterResponse {
   sfixed64 expire = 3;
 }
 
-message HeartbeatRequest {
-  sfixed64 device_id = 1;
-  fixed32 timestamp = 2;
-}
-
-message HeartbeatResponse { fixed32 timestamp = 1; }
-
 enum ResourceType {
   RESOURCE_TYPE_DESKTOP = 0;
   RESOURCE_TYPE_FILES = 1;

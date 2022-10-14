@@ -1,4 +1,3 @@
-mod heartbeat;
 mod key_exchange;
 mod key_exchange_reply;
 mod register;
@@ -11,23 +10,14 @@ use self::{
     visit_reply::handle_visit_reply,
 };
 use crate::handlers::{
-    heartbeat::handle_heartbeat, register::handle_register, subscribe::handle_subscribe,
-    visit::handle_visit,
+    register::handle_register, subscribe::handle_subscribe, visit::handle_visit,
 };
 use dashmap::DashMap;
 use futures::Stream;
 use once_cell::sync::Lazy;
 use prost_reflect::{DynamicMessage, ReflectMessage};
 use scopeguard::defer;
-use signaling_proto::{
-    message::{
-        publish_message::InnerPublishMessage, HeartbeatRequest, HeartbeatResponse,
-        KeyExchangeReplyRequest, KeyExchangeReplyResponse, KeyExchangeRequest, KeyExchangeResponse,
-        PublishMessage, RegisterRequest, RegisterResponse, SubscribeRequest, VisitReplyRequest,
-        VisitReplyResponse, VisitRequest, VisitResponse,
-    },
-    service::signaling_server::Signaling,
-};
+use signaling_proto::{message::*, service::signaling_server::Signaling};
 use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tonic::{Request, Response, Status};
@@ -46,15 +36,6 @@ impl Signaling for SignalingService {
     ) -> Result<Response<RegisterResponse>, Status> {
         let req = request.into_inner();
         handle_register(req).await.map(Response::new)
-    }
-
-    #[tracing::instrument]
-    async fn heartbeat(
-        &self,
-        request: Request<HeartbeatRequest>,
-    ) -> Result<Response<HeartbeatResponse>, Status> {
-        let req = request.into_inner();
-        handle_heartbeat(req).await.map(Response::new)
     }
 
     #[tracing::instrument]
@@ -130,7 +111,9 @@ impl Client {
         self.publish_message(
             caller_device_id,
             PublishMessage {
-                inner_publish_message: Some(InnerPublishMessage::VisitRequest(message)),
+                inner_publish_message: Some(publish_message::InnerPublishMessage::VisitRequest(
+                    message,
+                )),
             },
         )
         .await
@@ -144,7 +127,9 @@ impl Client {
         self.publish_message(
             caller_device_id,
             PublishMessage {
-                inner_publish_message: Some(InnerPublishMessage::KeyExchangeRequest(message)),
+                inner_publish_message: Some(
+                    publish_message::InnerPublishMessage::KeyExchangeRequest(message),
+                ),
             },
         )
         .await
