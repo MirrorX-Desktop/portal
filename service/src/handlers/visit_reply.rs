@@ -11,7 +11,7 @@ pub async fn handle_visit_reply(req: VisitReplyRequest) -> Result<VisitReplyResp
     let response = VisitResponse { allow: req.allow };
 
     passive_device_client
-        .reply_call(req.active_device_id, response)
+        .reply_call(req.active_device_id, Ok(response))
         .await;
 
     Ok(VisitReplyResponse {})

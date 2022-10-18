@@ -19,7 +19,7 @@ pub async fn handle_key_exchange_reply(
     };
 
     passive_device_client
-        .reply_call(req.active_device_id, response)
+        .reply_call(req.active_device_id, Ok(response))
         .await;
 
     Ok(KeyExchangeReplyResponse {})

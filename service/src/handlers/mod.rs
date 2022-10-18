@@ -101,7 +101,7 @@ impl Signaling for SignalingService {
 struct Client {
     device_id: i64,
     tx: Sender<Result<PublishMessage, Status>>,
-    call_tx_map: DashMap<(i64, String), tokio::sync::oneshot::Sender<DynamicMessage>>,
+    call_tx_map: DashMap<(i64, String), Sender<Result<DynamicMessage, Status>>>,
 }
 
 impl Client {
@@ -145,17 +145,24 @@ impl Client {
         .await
     }
 
-    async fn reply_call<ResponseMessage>(&self, reply_for_device_id: i64, message: ResponseMessage)
-    where
-        ResponseMessage: ReflectMessage,
+    async fn reply_call<ResponseMessage>(
+        &self,
+        reply_for_device_id: i64,
+        reply: Result<ResponseMessage, Status>,
+    ) where
+        ResponseMessage: ReflectMessage + Default,
     {
         let tx_key = (
             reply_for_device_id,
-            message.descriptor().full_name().to_owned(),
+            ResponseMessage::default()
+                .descriptor()
+                .full_name()
+                .to_owned(),
         );
 
         if let Some((_, tx)) = self.call_tx_map.remove(&tx_key) {
-            if tx.send(message.transcode_to_dynamic()).is_err() {
+            let reply = reply.map(|message| message.transcode_to_dynamic());
+            if tx.send(reply).await.is_err() {
                 tracing::warn!(?tx_key, "tx send failed");
             }
         } else {
@@ -182,7 +189,7 @@ impl Client {
             return Err(Status::already_exists("disallow repeat request"));
         }
 
-        let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
+        let (resp_tx, mut resp_rx) = tokio::sync::mpsc::channel(1);
 
         self.call_tx_map.insert(tx_key.clone(), resp_tx);
 
@@ -196,10 +203,10 @@ impl Client {
             Status::internal("signaling exchange message failed")
         })?;
 
-        let resp = tokio::time::timeout(Duration::from_secs(60), resp_rx)
+        let resp = tokio::time::timeout(Duration::from_secs(60), resp_rx.recv())
             .await
             .map_err(|_| Status::deadline_exceeded("request timeout"))?
-            .map_err(|_| Status::deadline_exceeded("request timeout"))?;
+            .unwrap_or(Err(Status::aborted("remote device disconnected")))?;
 
         resp.transcode_to::<ResponseMessage>()
             .map_err(|_| Status::internal("internal incorrect message dispatch"))
@@ -233,6 +240,16 @@ impl<T> Stream for ObserveStream<T> {
 
 impl<T> Drop for ObserveStream<T> {
     fn drop(&mut self) {
+        if let Some(client) = CLIENTS.get_mut(&self.device_id) {
+            // cancel all client's calls otherwise they'll cause DEADLOCK to CLIENTS behind DashMap!
+            for entry in client.call_tx_map.iter() {
+                let _ = entry
+                    .value()
+                    .try_send(Err(Status::aborted("remote device disconnected")));
+            }
+        }
+
+        // Be careful here will be DEADLOCK if any rpc call is awaiting
         let _ = CLIENTS.remove(&self.device_id);
         tracing::debug!(device_id = self.device_id, "client drop");
     }

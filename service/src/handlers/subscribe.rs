@@ -56,6 +56,7 @@ pub async fn handle_subscribe(
     }
 
     CLIENTS.insert(req.device_id, client);
+    tracing::info!(?req.device_id, "subscribe");
 
     Ok((req.device_id, rx))
 }
