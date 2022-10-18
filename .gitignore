@@ -2,4 +2,4 @@ target
 .DS_Store
 .vscode
 .idea
-.signaling.db
+signaling.db
