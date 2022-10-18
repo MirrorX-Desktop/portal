@@ -1,19 +1,23 @@
+use std::ops::Range;
+
 use crate::handlers::CLIENTS;
 use rand::distributions::Uniform;
 use rand::Rng;
 use signaling_proto::message::{RegisterRequest, RegisterResponse};
 use tonic::Status;
 
+const DEVICE_ID_RANGE: Range<i64> = 1000000001..9999999999;
+
 #[tracing::instrument]
 pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, Status> {
-    if let Some(device_id) = req.device_id {
-        if CLIENTS.contains_key(&device_id) {
+    if DEVICE_ID_RANGE.contains(&req.device_id) {
+        if CLIENTS.contains_key(&req.device_id) {
             return Err(Status::already_exists(
                 "register device id already connected to signaling server",
             ));
         }
 
-        let entity = crate::db::device::query_device_by_id(device_id)
+        let entity = crate::db::device::query_device_by_id(req.device_id)
             .await
             .map_err(|err| {
                 tracing::error!(?err, "query_device_by_id");
@@ -27,14 +31,14 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
             {
                 let new_expire = (chrono::Utc::now() + chrono::Duration::days(90)).timestamp();
                 if let Err(err) =
-                    crate::db::device::update_device_expire(device_id, new_expire).await
+                    crate::db::device::update_device_expire(req.device_id, new_expire).await
                 {
                     tracing::error!(?err, "update_device_expire");
                     return Err(Status::internal("internal database query error"));
                 }
 
                 return Ok(RegisterResponse {
-                    device_id,
+                    device_id: req.device_id,
                     expire: new_expire,
                 });
             }
@@ -62,9 +66,8 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
         }
     };
 
-    let device_id_range = Uniform::from(1000000001..9999999999);
     let reserve_device_ids: Vec<i64> = rand::thread_rng()
-        .sample_iter(device_id_range)
+        .sample_iter(Uniform::from(DEVICE_ID_RANGE))
         .take(100)
         .collect();
 

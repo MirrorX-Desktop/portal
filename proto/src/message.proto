@@ -7,7 +7,7 @@ message GetDomainRequest {}
 message GetDomainResponse { string domain = 1; }
 
 message RegisterRequest {
-  optional sfixed64 device_id = 1;
+  sfixed64 device_id = 1;
   string device_finger_print = 2;
 }
 
