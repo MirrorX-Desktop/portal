@@ -2,15 +2,18 @@ syntax = "proto3";
 
 package message;
 
+message GetDomainRequest {}
+
+message GetDomainResponse { string domain = 1; }
+
 message RegisterRequest {
   optional sfixed64 device_id = 1;
   string device_finger_print = 2;
 }
 
 message RegisterResponse {
-  string domain = 1;
-  sfixed64 device_id = 2;
-  sfixed64 expire = 3;
+  sfixed64 device_id = 1;
+  sfixed64 expire = 2;
 }
 
 enum ResourceType {
@@ -19,40 +22,33 @@ enum ResourceType {
 }
 
 message VisitRequest {
-  string domain = 1;
-  sfixed64 active_device_id = 2;
-  sfixed64 passive_device_id = 3;
-  ResourceType resource_type = 4;
+  sfixed64 active_device_id = 1;
+  sfixed64 passive_device_id = 2;
+  ResourceType resource_type = 3;
 }
 
-message VisitResponse {
-  string domain = 1;
-  bool allow = 2;
-}
+message VisitResponse { bool allow = 1; }
 
 message VisitReplyRequest {
-  string domain = 1;
-  sfixed64 active_device_id = 2;
-  sfixed64 passive_device_id = 3;
-  bool allow = 4;
+  sfixed64 active_device_id = 1;
+  sfixed64 passive_device_id = 2;
+  bool allow = 3;
 }
 
 message VisitReplyResponse {}
 
 message KeyExchangeRequest {
-  string domain = 1;
-  sfixed64 active_device_id = 2;
-  sfixed64 passive_device_id = 3;
-  bytes password_salt = 4;
-  bytes secret = 5;
-  bytes secret_nonce = 6;
+  sfixed64 active_device_id = 1;
+  sfixed64 passive_device_id = 2;
+  bytes password_salt = 3;
+  bytes secret = 4;
+  bytes secret_nonce = 5;
 }
 
 message KeyExchangeResponse {
-  string domain = 1;
-  sfixed64 active_device_id = 2;
-  sfixed64 passive_device_id = 3;
-  KeyExchangeResult key_exchange_result = 4;
+  sfixed64 active_device_id = 1;
+  sfixed64 passive_device_id = 2;
+  KeyExchangeResult key_exchange_result = 3;
 }
 
 enum KeyExchangeReplyError {
@@ -69,10 +65,9 @@ message KeyExchangeResult {
 }
 
 message KeyExchangeReplyRequest {
-  string domain = 1;
-  sfixed64 active_device_id = 2;
-  sfixed64 passive_device_id = 3;
-  KeyExchangeResult key_exchange_result = 4;
+  sfixed64 active_device_id = 1;
+  sfixed64 passive_device_id = 2;
+  KeyExchangeResult key_exchange_result = 3;
 }
 
 message KeyExchangeReplyResponse {}

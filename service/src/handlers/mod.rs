@@ -1,3 +1,4 @@
+mod get_domain;
 mod key_exchange;
 mod key_exchange_reply;
 mod register;
@@ -6,8 +7,8 @@ mod visit;
 mod visit_reply;
 
 use self::{
-    key_exchange::handle_key_exchange, key_exchange_reply::handle_key_exchange_reply,
-    visit_reply::handle_visit_reply,
+    get_domain::handle_get_domain, key_exchange::handle_key_exchange,
+    key_exchange_reply::handle_key_exchange_reply, visit_reply::handle_visit_reply,
 };
 use crate::handlers::{
     register::handle_register, subscribe::handle_subscribe, visit::handle_visit,
@@ -29,6 +30,15 @@ pub struct SignalingService {}
 
 #[tonic::async_trait]
 impl Signaling for SignalingService {
+    #[tracing::instrument]
+    async fn get_domain(
+        &self,
+        request: Request<GetDomainRequest>,
+    ) -> Result<Response<GetDomainResponse>, Status> {
+        let req = request.into_inner();
+        handle_get_domain(req).await.map(Response::new)
+    }
+
     #[tracing::instrument]
     async fn register(
         &self,

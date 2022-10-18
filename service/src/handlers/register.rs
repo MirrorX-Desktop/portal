@@ -6,8 +6,6 @@ use tonic::Status;
 
 #[tracing::instrument]
 pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, Status> {
-    let domain = std::env::var("DOMAIN").map_err(|_| Status::internal("server internal error"))?;
-
     if let Some(device_id) = req.device_id {
         if CLIENTS.contains_key(&device_id) {
             return Err(Status::already_exists(
@@ -36,7 +34,6 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
                 }
 
                 return Ok(RegisterResponse {
-                    domain,
                     device_id,
                     expire: new_expire,
                 });
@@ -59,7 +56,6 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
             }
 
             return Ok(RegisterResponse {
-                domain,
                 device_id: entity.id,
                 expire: new_expire,
             });
@@ -93,11 +89,7 @@ pub async fn handle_register(req: RegisterRequest) -> Result<RegisterResponse, S
         if (crate::db::device::insert_device(device_id, &req.device_finger_print, expire).await)
             .is_ok()
         {
-            return Ok(RegisterResponse {
-                domain,
-                device_id,
-                expire,
-            });
+            return Ok(RegisterResponse { device_id, expire });
         }
     }
 

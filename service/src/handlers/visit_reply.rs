@@ -8,10 +8,7 @@ pub async fn handle_visit_reply(req: VisitReplyRequest) -> Result<VisitReplyResp
         .get(&req.passive_device_id)
         .ok_or_else(|| Status::not_found("active device not found"))?;
 
-    let response = VisitResponse {
-        domain: req.domain,
-        allow: req.allow,
-    };
+    let response = VisitResponse { allow: req.allow };
 
     passive_device_client
         .reply_call(req.active_device_id, response)

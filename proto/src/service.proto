@@ -5,6 +5,7 @@ package service;
 import "message.proto";
 
 service Signaling {
+  rpc GetDomain(message.GetDomainRequest) returns (message.GetDomainResponse) {}
   rpc Register(message.RegisterRequest) returns (message.RegisterResponse) {}
   rpc Visit(message.VisitRequest) returns (message.VisitResponse) {}
   rpc VisitReply(message.VisitReplyRequest)
