@@ -4,14 +4,12 @@ use tonic::Status;
 
 #[tracing::instrument]
 pub async fn handle_visit_reply(req: VisitReplyRequest) -> Result<VisitReplyResponse, Status> {
-    let passive_device_client = CLIENTS
-        .get(&req.passive_device_id)
-        .ok_or_else(|| Status::not_found("active device not found"))?;
-
     let response = VisitResponse { allow: req.allow };
 
-    passive_device_client
-        .reply_call(req.active_device_id, Ok(response))
+    CLIENTS
+        .get(&req.active_device_id)
+        .ok_or_else(|| Status::not_found("active device not found"))?
+        .reply_call(req.passive_device_id, Ok(response))
         .await;
 
     Ok(VisitReplyResponse {})

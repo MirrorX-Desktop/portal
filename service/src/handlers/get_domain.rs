@@ -7,7 +7,7 @@ pub async fn handle_get_domain(req: GetDomainRequest) -> Result<GetDomainRespons
         Ok(domain_var) => Ok(GetDomainResponse { domain: domain_var }),
         Err(err) => {
             tracing::error!(?err, "get env 'DOMAIN' failed");
-            return Err(Status::internal("read 'DOMAIN' failed"));
+            Err(Status::internal("read 'DOMAIN' failed"))
         }
     }
 }

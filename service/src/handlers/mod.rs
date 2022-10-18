@@ -19,8 +19,11 @@ use once_cell::sync::Lazy;
 use prost_reflect::{DynamicMessage, ReflectMessage};
 use scopeguard::defer;
 use signaling_proto::{message::*, service::signaling_server::Signaling};
-use std::time::Duration;
-use tokio::sync::mpsc::{Receiver, Sender};
+use std::{collections::HashMap, time::Duration};
+use tokio::sync::{
+    mpsc::{Receiver, Sender},
+    Mutex,
+};
 use tonic::{Request, Response, Status};
 
 static CLIENTS: Lazy<DashMap<i64, Client>> = Lazy::new(DashMap::new);
@@ -101,7 +104,7 @@ impl Signaling for SignalingService {
 struct Client {
     device_id: i64,
     tx: Sender<Result<PublishMessage, Status>>,
-    call_tx_map: DashMap<(i64, String), Sender<Result<DynamicMessage, Status>>>,
+    call_tx_map: Mutex<HashMap<(i64, String), Sender<Result<DynamicMessage, Status>>>>,
 }
 
 impl Client {
@@ -109,17 +112,17 @@ impl Client {
         Client {
             device_id,
             tx,
-            call_tx_map: DashMap::new(),
+            call_tx_map: Mutex::new(HashMap::new()),
         }
     }
 
     pub async fn call_visit_request(
         &self,
-        caller_device_id: i64,
+        remote_device_id: i64,
         message: VisitRequest,
     ) -> Result<VisitResponse, Status> {
         self.publish_message(
-            caller_device_id,
+            remote_device_id,
             PublishMessage {
                 inner_publish_message: Some(publish_message::InnerPublishMessage::VisitRequest(
                     message,
@@ -131,11 +134,11 @@ impl Client {
 
     pub async fn call_key_exchange_request(
         &self,
-        caller_device_id: i64,
+        remote_device_id: i64,
         message: KeyExchangeRequest,
     ) -> Result<KeyExchangeResponse, Status> {
         self.publish_message(
-            caller_device_id,
+            remote_device_id,
             PublishMessage {
                 inner_publish_message: Some(
                     publish_message::InnerPublishMessage::KeyExchangeRequest(message),
@@ -147,20 +150,20 @@ impl Client {
 
     async fn reply_call<ResponseMessage>(
         &self,
-        reply_for_device_id: i64,
+        reply_device_id: i64,
         reply: Result<ResponseMessage, Status>,
     ) where
         ResponseMessage: ReflectMessage + Default,
     {
         let tx_key = (
-            reply_for_device_id,
+            reply_device_id,
             ResponseMessage::default()
                 .descriptor()
                 .full_name()
                 .to_owned(),
         );
 
-        if let Some((_, tx)) = self.call_tx_map.remove(&tx_key) {
+        if let Some(tx) = self.call_tx_map.lock().await.remove(&tx_key) {
             let reply = reply.map(|message| message.transcode_to_dynamic());
             if tx.send(reply).await.is_err() {
                 tracing::warn!(?tx_key, "tx send failed");
@@ -172,7 +175,7 @@ impl Client {
 
     async fn publish_message<ResponseMessage>(
         &self,
-        caller_device_id: i64,
+        remote_device_id: i64,
         message: PublishMessage,
     ) -> Result<ResponseMessage, Status>
     where
@@ -183,33 +186,43 @@ impl Client {
             .full_name()
             .to_string();
 
-        let tx_key = (caller_device_id, response_message_name.to_owned());
+        let tx_key = (remote_device_id, response_message_name.to_owned());
+        let (resp_tx, mut resp_rx) = tokio::sync::mpsc::channel(1);
 
-        if self.call_tx_map.contains_key(&tx_key) {
+        let mut call_tx_map = self.call_tx_map.lock().await;
+
+        if call_tx_map.contains_key(&tx_key) {
             return Err(Status::already_exists("disallow repeat request"));
         }
 
-        let (resp_tx, mut resp_rx) = tokio::sync::mpsc::channel(1);
+        call_tx_map.insert(tx_key.clone(), resp_tx);
 
-        self.call_tx_map.insert(tx_key.clone(), resp_tx);
+        drop(call_tx_map);
 
-        defer! {
-            self.call_tx_map.remove(&tx_key);
+        if let Some(remote_client) = CLIENTS.get(&remote_device_id) {
+            if let Err(err) = remote_client.tx.try_send(Ok(message)) {
+                tracing::error!(
+                    from_device = self.device_id,
+                    to_device = remote_client.device_id,
+                    ?err,
+                    "publish message failed"
+                );
+                return Err(Status::internal("signaling exchange message failed"));
+            }
+        } else {
+            return Err(Status::aborted("remote device disconnected"));
         }
-
-        self.tx.send(Ok(message)).await.map_err(|err| {
-            let device_id = self.device_id;
-            tracing::error!(?device_id, ?err, "publish message failed");
-            Status::internal("signaling exchange message failed")
-        })?;
 
         let resp = tokio::time::timeout(Duration::from_secs(60), resp_rx.recv())
             .await
             .map_err(|_| Status::deadline_exceeded("request timeout"))?
-            .unwrap_or(Err(Status::aborted("remote device disconnected")))?;
+            .unwrap_or_else(|| Err(Status::aborted("remote device disconnected")))?;
 
-        resp.transcode_to::<ResponseMessage>()
-            .map_err(|_| Status::internal("internal incorrect message dispatch"))
+        let resp = resp
+            .transcode_to::<ResponseMessage>()
+            .map_err(|_| Status::internal("internal incorrect message dispatch"))?;
+
+        Ok(resp)
     }
 }
 
@@ -240,17 +253,18 @@ impl<T> Stream for ObserveStream<T> {
 
 impl<T> Drop for ObserveStream<T> {
     fn drop(&mut self) {
-        if let Some(client) = CLIENTS.get_mut(&self.device_id) {
+        let device_id = self.device_id;
+        tokio::spawn(async move {
             // cancel all client's calls otherwise they'll cause DEADLOCK to CLIENTS behind DashMap!
-            for entry in client.call_tx_map.iter() {
-                let _ = entry
-                    .value()
-                    .try_send(Err(Status::aborted("remote device disconnected")));
+            if let Some(client) = CLIENTS.get(&device_id) {
+                for tx in client.call_tx_map.lock().await.values() {
+                    tx.closed().await;
+                }
             }
-        }
 
-        // Be careful here will be DEADLOCK if any rpc call is awaiting
-        let _ = CLIENTS.remove(&self.device_id);
-        tracing::debug!(device_id = self.device_id, "client drop");
+            // Be careful here will be DEADLOCK if any rpc call is awaiting
+            let _ = CLIENTS.remove(&device_id);
+            tracing::debug!(?device_id, "client drop");
+        });
     }
 }
