@@ -166,10 +166,10 @@ impl Client {
         if let Some(tx) = self.call_tx_map.lock().await.remove(&tx_key) {
             let reply = reply.map(|message| message.transcode_to_dynamic());
             if tx.send(reply).await.is_err() {
-                tracing::warn!(?tx_key, "tx send failed");
+                tracing::error!(?tx_key, "tx send failed");
             }
         } else {
-            tracing::warn!(?tx_key, "reply tx not exists");
+            tracing::error!(?tx_key, "reply tx not exists");
         }
     }
 
@@ -197,6 +197,7 @@ impl Client {
 
         call_tx_map.insert(tx_key.clone(), resp_tx);
 
+        tracing::info!(?tx_key, "add publish message tx");
         drop(call_tx_map);
 
         if let Some(remote_client) = CLIENTS.get(&remote_device_id) {
