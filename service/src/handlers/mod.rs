@@ -19,13 +19,11 @@ use once_cell::sync::Lazy;
 use prost_reflect::{DynamicMessage, ReflectMessage};
 use scopeguard::defer;
 use signaling_proto::{message::*, service::signaling_server::Signaling};
-use std::{collections::HashMap, time::Duration};
-use tokio::sync::{
-    mpsc::{Receiver, Sender},
-    Mutex,
-};
+use std::time::Duration;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tonic::{Request, Response, Status};
 
+const CALL_TIMEOUT: Duration = Duration::from_secs(60);
 static CLIENTS: Lazy<DashMap<i64, Client>> = Lazy::new(DashMap::new);
 
 #[derive(Debug, Default)]
@@ -104,7 +102,7 @@ impl Signaling for SignalingService {
 struct Client {
     device_id: i64,
     tx: Sender<Result<PublishMessage, Status>>,
-    call_tx_map: Mutex<HashMap<(i64, String), Sender<Result<DynamicMessage, Status>>>>,
+    call_tx_map: moka::sync::Cache<(i64, String), Sender<Result<DynamicMessage, Status>>>,
 }
 
 impl Client {
@@ -112,7 +110,10 @@ impl Client {
         Client {
             device_id,
             tx,
-            call_tx_map: Mutex::new(HashMap::new()),
+            call_tx_map: moka::sync::CacheBuilder::new(8)
+                .time_to_live(CALL_TIMEOUT)
+                .initial_capacity(8)
+                .build(),
         }
     }
 
@@ -163,7 +164,8 @@ impl Client {
                 .to_owned(),
         );
 
-        if let Some(tx) = self.call_tx_map.lock().await.remove(&tx_key) {
+        if let Some(tx) = self.call_tx_map.get(&tx_key) {
+            self.call_tx_map.invalidate(&tx_key);
             let reply = reply.map(|message| message.transcode_to_dynamic());
             if tx.send(reply).await.is_err() {
                 tracing::error!(?tx_key, "tx send failed");
@@ -189,16 +191,17 @@ impl Client {
         let tx_key = (remote_device_id, response_message_name.to_owned());
         let (resp_tx, mut resp_rx) = tokio::sync::mpsc::channel(1);
 
-        let mut call_tx_map = self.call_tx_map.lock().await;
-
-        if call_tx_map.contains_key(&tx_key) {
+        if self.call_tx_map.contains_key(&tx_key) {
             return Err(Status::already_exists("disallow repeat request"));
         }
 
-        call_tx_map.insert(tx_key.clone(), resp_tx);
+        self.call_tx_map.insert(tx_key.clone(), resp_tx);
 
         tracing::info!(?tx_key, "add publish message tx");
-        drop(call_tx_map);
+
+        defer! {
+            self.call_tx_map.invalidate(&tx_key);
+        }
 
         if let Some(remote_client) = CLIENTS.get(&remote_device_id) {
             if let Err(err) = remote_client.tx.try_send(Ok(message)) {
@@ -256,14 +259,10 @@ impl<T> Drop for ObserveStream<T> {
     fn drop(&mut self) {
         let device_id = self.device_id;
         tokio::spawn(async move {
-            // cancel all client's calls otherwise they'll cause DEADLOCK to CLIENTS behind DashMap!
             if let Some(client) = CLIENTS.get(&device_id) {
-                for tx in client.call_tx_map.lock().await.values() {
-                    tx.closed().await;
-                }
+                client.call_tx_map.invalidate_all();
             }
 
-            // Be careful here will be DEADLOCK if any rpc call is awaiting
             let _ = CLIENTS.remove(&device_id);
             tracing::debug!(?device_id, "client drop");
         });

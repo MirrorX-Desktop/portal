@@ -29,9 +29,7 @@ async fn main() -> anyhow::Result<()> {
     Server::builder()
         .trace_fn(|_| tracing::info_span!("signaling-service"))
         .add_service(service)
-        .serve_with_incoming_shutdown(incoming, async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
+        .serve_with_incoming(incoming)
         .await?;
 
     Ok(())
