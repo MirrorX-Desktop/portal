@@ -1,4 +1,4 @@
-use super::error::HttpError;
+use super::error::{HttpError, Response};
 use axum::Json;
 use serde::Serialize;
 
@@ -9,19 +9,19 @@ pub struct IdentityResponse {
 }
 
 #[tracing::instrument]
-pub async fn identity() -> Result<Json<IdentityResponse>, HttpError> {
+pub async fn identity() -> Response<IdentityResponse> {
     let Ok(domain) = std::env::var("DOMAIN") else {
         tracing::error!("'Domain' not exists in env");
-        return Err(HttpError::Internal);
+        return Response::Error(HttpError::Internal);
     };
 
     let Ok(min_client_version) = std::env::var("MIN_CLIENT_VERSION") else {
         tracing::error!("'MIN_CLIENT_VERSION' not exists in env");
-        return Err(HttpError::Internal);
+        return Response::Error(HttpError::Internal);
     };
 
-    Ok(Json(IdentityResponse {
+    Response::Message(IdentityResponse {
         domain,
         min_client_version,
-    }))
+    })
 }

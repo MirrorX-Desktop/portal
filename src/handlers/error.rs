@@ -1,24 +1,27 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
-use serde_json::json;
+use serde::Serialize;
 
+#[derive(Debug, Serialize)]
 pub enum HttpError {
     Internal,
     Timeout,
+    InvalidArgs,
     ResourceExhausted,
     RemoteOffline,
 }
 
-impl IntoResponse for HttpError {
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum Response<T>
+where
+    T: Serialize,
+{
+    Message(T),
+    Error(HttpError),
+}
+
+impl<T: Serialize> IntoResponse for Response<T> {
     fn into_response(self) -> axum::response::Response {
-        let error_code = match self {
-            HttpError::Internal => 1,
-            HttpError::Timeout => 2,
-            HttpError::ResourceExhausted => 3,
-            HttpError::RemoteOffline => 4,
-        };
-
-        let body = Json(json!({ "error_code": error_code }));
-
-        (StatusCode::OK, body).into_response()
+        (StatusCode::OK, Json(self)).into_response()
     }
 }

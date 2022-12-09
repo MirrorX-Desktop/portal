@@ -1,4 +1,4 @@
-use super::error::HttpError;
+use super::error::{HttpError, Response};
 use crate::{
     message::{ServerMessage, VisitFailureReason},
     subscriber::{CALLS, SUBSCRIBERS},
@@ -22,19 +22,27 @@ pub struct VisitResponse {
     result: Result<String, VisitFailureReason>,
 }
 
-pub async fn visit(Json(req): Json<VisitRequest>) -> Result<Json<VisitResponse>, HttpError> {
+pub async fn visit(Json(req): Json<VisitRequest>) -> Response<VisitResponse> {
     let Some((mutex, subscribe_tx)) = SUBSCRIBERS.get(&req.passive_device_id) else {
-        return Err(HttpError::RemoteOffline);
+        return Response::Error(HttpError::RemoteOffline);
     };
 
-    let password_salt = base64::decode(req.password_salt).map_err(|_| HttpError::Internal)?;
-    let secret = base64::decode(req.secret).map_err(|_| HttpError::Internal)?;
-    let secret_nonce = base64::decode(req.secret_nonce).map_err(|_| HttpError::Internal)?;
+    let Ok(password_salt) = base64::decode(req.password_salt) else {
+        return Response::Error(HttpError::InvalidArgs);
+    };
+
+    let Ok(secret) = base64::decode(req.secret) else {
+        return Response::Error(HttpError::InvalidArgs);
+    };
+
+    let Ok(secret_nonce) = base64::decode(req.secret_nonce) else {
+        return Response::Error(HttpError::InvalidArgs);
+    };
 
     // hold mutex until timeout or visit call replied
-    let _ = tokio::time::timeout(Duration::from_secs(60), mutex.lock())
-        .await
-        .map_err(|_| HttpError::Timeout)?;
+    let Ok(_) = tokio::time::timeout(Duration::from_secs(60), mutex.lock()).await else {
+        return Response::Error(HttpError::Timeout)
+    };
 
     // register visit call
     let (call_tx, mut call_rx) = tokio::sync::mpsc::channel(1);
@@ -55,14 +63,16 @@ pub async fn visit(Json(req): Json<VisitRequest>) -> Result<Json<VisitResponse>,
         .await
         .is_err()
     {
-        return Err(HttpError::RemoteOffline);
+        return Response::Error(HttpError::RemoteOffline);
     }
 
-    let result = tokio::time::timeout(Duration::from_secs(60), call_rx.recv())
-        .await
-        .map_err(|_| HttpError::Timeout)?
-        .ok_or(HttpError::Timeout)?
-        .map(base64::encode);
-
-    Ok(Json(VisitResponse { result }))
+    match tokio::time::timeout(Duration::from_secs(60), call_rx.recv()).await {
+        Ok(v) => match v {
+            Some(result) => Response::Message(VisitResponse {
+                result: result.map(base64::encode),
+            }),
+            None => Response::Error(HttpError::Timeout),
+        },
+        Err(_) => Response::Error(HttpError::Timeout),
+    }
 }
