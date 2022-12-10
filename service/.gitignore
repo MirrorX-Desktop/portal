@@ -1,7 +1,0 @@
-/target
-.DS_Store
-.vscode
-.idea
-signaling.db
-signaling.db-shm
-signaling.db-wal
