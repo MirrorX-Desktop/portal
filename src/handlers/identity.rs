@@ -1,3 +1,5 @@
+use crate::{SIGNALING_PORT, SUBSCRIBE_PORT};
+
 use super::error::{HttpError, Response};
 use serde::Serialize;
 
@@ -5,6 +7,8 @@ use serde::Serialize;
 pub struct IdentityResponse {
     domain: String,
     min_client_version: String,
+    signaling_port: u16,
+    subscribe_port: u16,
 }
 
 #[tracing::instrument]
@@ -22,5 +26,7 @@ pub async fn identity() -> Response<IdentityResponse> {
     Response::Message(IdentityResponse {
         domain,
         min_client_version,
+        signaling_port: *SIGNALING_PORT,
+        subscribe_port: *SUBSCRIBE_PORT,
     })
 }

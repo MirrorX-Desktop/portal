@@ -15,7 +15,7 @@ use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[allow(clippy::type_complexity)]
 pub static SUBSCRIBERS: Lazy<
-    // use Mutex to make sure that passive device has at most one visit call at the same time
+    // use Mutex to make sure that passive device only serve at most one visit call simultaneously
     moka::future::Cache<i64, (Arc<Mutex<()>>, tokio::sync::mpsc::Sender<ServerMessage>)>,
 > = Lazy::new(|| {
     moka::future::CacheBuilder::new(256)
