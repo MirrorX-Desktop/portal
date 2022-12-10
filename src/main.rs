@@ -10,7 +10,7 @@ use axum::{
 };
 use dotenvy::dotenv;
 use once_cell::sync::Lazy;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, SocketAddr};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 pub(crate) static SIGNALING_PORT: Lazy<u16> =
