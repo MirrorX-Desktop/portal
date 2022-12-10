@@ -1,5 +1,4 @@
 use super::error::{HttpError, Response};
-use axum::Json;
 use serde::Serialize;
 
 #[derive(Serialize)]

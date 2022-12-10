@@ -9,7 +9,7 @@ use axum::{
     Router,
 };
 use dotenvy::dotenv;
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 #[tokio::main]
@@ -23,8 +23,9 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("load .env from {:?}", env_path);
 
-    let http_listen_addr: SocketAddr = std::env::var("HTTP_LISTEN_ADDR")?.parse()?;
-    let subscribe_listen_addr: SocketAddr = std::env::var("SUBSCRIBE_LISTEN_ADDR")?.parse()?;
+    let signaling_port: u16 = std::env::var("SIGNALING_PORT")?.parse()?;
+    let http_listen_addr: SocketAddr = (Ipv4Addr::UNSPECIFIED, signaling_port).into();
+    let subscribe_listen_addr: SocketAddr = (Ipv4Addr::UNSPECIFIED, signaling_port + 1).into();
 
     db::ensure_schema().await?;
 
