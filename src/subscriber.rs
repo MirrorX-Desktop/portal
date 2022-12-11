@@ -101,7 +101,9 @@ async fn serve_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Result
             "bind connection with device_id"
         );
         let (tx, rx) = tokio::sync::mpsc::channel(1);
-        let _ = SUBSCRIBERS.insert(subscription.device_id, (Arc::new(Mutex::new(())), tx));
+        SUBSCRIBERS
+            .insert(subscription.device_id, (Arc::new(Mutex::new(())), tx))
+            .await;
         tokio::spawn(serve_sink(subscription.device_id, sink, rx));
         tokio::spawn(serve_stream(subscription.device_id, stream));
     }
@@ -116,12 +118,14 @@ async fn serve_sink(
 ) {
     loop {
         let Some(server_message) = rx.recv().await else {
+            SUBSCRIBERS.invalidate(&device_id).await;
             tracing::info!(?device_id, "subscriber tx closed, drop sink");
             return;
         };
 
         if let Ok(buffer) = BINARY_SERIALIZER.serialize(&server_message) {
             if let Err(err) = sink.send(Bytes::from(buffer)).await {
+                SUBSCRIBERS.invalidate(&device_id).await;
                 tracing::error!(?device_id, ?err, "send to subscriber failed, drop sink");
                 return;
             }
@@ -135,11 +139,13 @@ async fn serve_stream(
 ) {
     loop {
         let Some(buffer) = stream.next().await else {
+            SUBSCRIBERS.invalidate(&device_id).await;
             tracing::info!(?device_id, "receive from subscriber failed, drop stream");
             return;
         };
 
         let Ok(buffer) = buffer else {
+            SUBSCRIBERS.invalidate(&device_id).await;
             tracing::info!(?device_id, "subscriber received buffer framed failed, drop stream");
             return;
         };
