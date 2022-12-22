@@ -71,20 +71,27 @@ async fn serve_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Result
             .new_codec(),
     );
 
-    let subscription = match framed_stream.next().await {
-        Some(frame) => match frame {
-            Ok(buffer) => match BINARY_SERIALIZER.deserialize::<Subscription>(buffer.deref()) {
-                Ok(subscription) => subscription,
+    let subscription = match tokio::time::timeout(Duration::from_secs(30), framed_stream.next())
+        .await
+    {
+        Ok(frame) => match frame {
+            Some(frame) => match frame {
+                Ok(buffer) => match BINARY_SERIALIZER.deserialize::<Subscription>(buffer.deref()) {
+                    Ok(subscription) => subscription,
+                    Err(err) => {
+                        anyhow::bail!(err)
+                    }
+                },
                 Err(err) => {
-                    anyhow::bail!(err)
+                    anyhow::bail!(err);
                 }
             },
-            Err(err) => {
-                anyhow::bail!(err);
+            None => {
+                anyhow::bail!("connection disconnected");
             }
         },
-        None => {
-            anyhow::bail!("connection disconnected");
+        Err(_) => {
+            anyhow::bail!("wait handshake timeout");
         }
     };
 
