@@ -1,6 +1,5 @@
-use crate::{SIGNALING_PORT, SUBSCRIBE_PORT};
-
 use super::error::{HttpError, Response};
+use crate::{SIGNALING_PORT, SUBSCRIBE_PORT};
 use serde::Serialize;
 
 #[derive(Serialize)]

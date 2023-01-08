@@ -1,6 +1,14 @@
 use super::{entities, DB_POOL};
 use rusqlite::{params, OptionalExtension};
 
+pub async fn query_device_id_count() -> anyhow::Result<u64> {
+    DB_POOL
+        .get()
+        .map_err(|err| anyhow::anyhow!(err))?
+        .query_row(r#"SELECT COUNT(*) FROM devices"#, [], |row| row.get(0))
+        .map_err(|err| anyhow::anyhow!(err))
+}
+
 pub async fn query_device_by_id(device_id: i64) -> anyhow::Result<Option<entities::Device>> {
     DB_POOL
         .get()
