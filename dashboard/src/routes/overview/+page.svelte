@@ -162,26 +162,6 @@
 				</div>
 				<div>Memory</div>
 			</div>
-
-			<!-- <div class="flex-1 flex flex-col gap-8 items-center justify-center">
-				<div
-					class="radial-progress bg-primary text-primary-content border-4 border-primary shadow"
-					style="--value:2; --size:8rem;"
-				>
-					2%
-				</div>
-				<div>Network Pressure</div>
-			</div> -->
-
-			<div class="flex-1 flex flex-col gap-8 items-center justify-center">
-				<div
-					class="radial-progress bg-error text-primary-content border-4 border-error shadow"
-					style="--value:85; --size:8rem;"
-				>
-					85%
-				</div>
-				<div>Storage Usage</div>
-			</div>
 		</div>
 
 		<div class="flex-1 flex flex-col rounded-2xl shadow px-4 pt-4">
