@@ -1,5 +1,5 @@
 [package]
-name = "signaling"
+name = "portal"
 version = "0.1.0"
 edition = "2021"
 
@@ -33,3 +33,4 @@ base64 = "0.20.0"
 rust-embed = "6.4.2"
 mime_guess = "2.0.4"
 reqwest = { version = "0.11.13", features = ["json"] }
+openssl = { version = "0.10", features = ["vendored"] }

@@ -2,51 +2,50 @@
 	import { page } from '$app/stores';
 	import '../app.css';
 	import brand from '$lib/images/brand.png';
+	import { faLanguage } from '@fortawesome/free-solid-svg-icons';
+	import Fa from 'svelte-fa';
 </script>
 
 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 <!-- svelte-ignore a11y-label-has-associated-control -->
 <!-- svelte-ignore a11y-missing-attribute -->
 <div class="w-full h-full flex flex-col">
-	<div class="navbar bg-base-300 pl-0">
+	<div class="navbar bg-base-300 py-0 pl-0 pr-2">
 		<div class="flex-none w-56 flex flex-row text-center gap-3">
 			<img width="48" height="48" src={brand} class="pl-2" />
-			<span class="text-3xl font-bold">Dashboard</span>
+			<div class="flex flex-col items-start w-full">
+				<div class="text-3xl font-bold">MirrorX</div>
+			</div>
 		</div>
 		<div class="flex-1" />
-		<!-- <div class="dropdown dropdown-end">
-			<label tabindex="0" class="btn btn-ghost btn-circle avatar">
-				<div class="w-10 rounded-full">
-					<img src="https://placeimg.com/80/80/people" />
-				</div>
-			</label>
-
-			<ul
-				tabindex="0"
-				class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
-			>
-				<li>
-					<a class="justify-between">
-						Profile
-						<span class="badge">New</span>
+		<div class="flex-none">
+			<ul class="menu menu-horizontal px-1 gap-2">
+				<li tabindex="0">
+					<a>
+						<Fa icon={faLanguage} />
+						<svg
+							class="fill-current"
+							xmlns="http://www.w3.org/2000/svg"
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" /></svg
+						>
 					</a>
+					<ul class="p-2 bg-base-100 shadow">
+						<li><a>English</a></li>
+						<li><a>中文</a></li>
+					</ul>
 				</li>
-
-				<li><a>Settings</a></li>
-
-				<li><a>Logout</a></li>
 			</ul>
-		</div> -->
+		</div>
 	</div>
 
 	<div class="flex-1 w-full h-full flex flex-row">
 		<nav class="w-56 h-full flex-0">
 			<ul class="menu bg-base-200 w-full p-2 h-full">
 				<li class="mb-2">
-					<a href="/stat" class={$page.url.pathname == '/stat' ? 'active' : undefined}>Stat</a>
-				</li>
-				<li>
-					<a href="/about" class={$page.url.pathname == '/about' ? 'active' : undefined}>About</a>
+					<a href="/overview" class={$page.url.pathname == '/overview' ? 'active' : undefined}>Overview</a>
 				</li>
 			</ul>
 		</nav>

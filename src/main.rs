@@ -1,5 +1,5 @@
 use dotenvy::dotenv;
-use signaling::{
+use portal::{
     db,
     server::{api::launch_api_server, dashboard::launch_dashboard_server},
 };

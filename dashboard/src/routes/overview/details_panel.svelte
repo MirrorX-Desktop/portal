@@ -28,7 +28,7 @@
 	};
 </script>
 
-<div class="stats shadow flex flex-row mb-2">
+<div class="stats shadow flex flex-row">
 	<div class="stat flex-1">
 		<div class="stat-figure text-primary">
 			<Fa icon={faHouseSignal} size="1.5x" class="stroke-current" />
@@ -37,25 +37,25 @@
 		<div class="stat-value">
 			{domain}
 		</div>
-		<div class="stat-desc">Current signaling domain</div>
+		<div class="stat-desc" />
 	</div>
 
 	<div class="stat flex-1">
 		<div class="stat-figure text-primary">
 			<Fa icon={faHardDrive} size="1.5x" class="stroke-current" />
 		</div>
-		<div class="stat-title">Allocated DeviceIDs</div>
+		<div class="stat-title">Device ID</div>
 		<div class="stat-value">
 			{allocated}
 		</div>
-		<div class="stat-desc">Registered devices</div>
+		<div class="stat-desc">In total</div>
 	</div>
 
 	<div class="stat flex-1">
 		<div class="stat-figure text-primary">
 			<Fa icon={faArrowRightArrowLeft} size="1.5x" class="stroke-current" />
 		</div>
-		<div class="stat-title">Bytes Transferred</div>
+		<div class="stat-title">Data Transferred</div>
 		<div class="stat-value">
 			{getFileSize(bytesTransferred)}
 		</div>

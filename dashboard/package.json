@@ -39,6 +39,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"echarts": "^5.4.1",
 		"moment": "^2.29.4"
 	}
 }

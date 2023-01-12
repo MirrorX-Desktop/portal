@@ -19,7 +19,7 @@ pub async fn launch_dashboard_server() {
 
     let app = Router::new()
         .route("/", get(index_page_handler))
-        .route("/about", get(about_page_handler))
+        .route("/overview",get(overview_page_handler))
         .route("/favicon.png", get(favicon_handler))
         .route("/robots.txt", get(robots_handler))
         .route("/vite-manifest.json", get(vite_manifest_handler))
@@ -46,8 +46,8 @@ async fn index_page_handler() -> impl IntoResponse {
     static_handler(Uri::from_static("index.html")).await
 }
 
-async fn about_page_handler() -> impl IntoResponse {
-    static_handler(Uri::from_static("about.html")).await
+async fn overview_page_handler() -> impl IntoResponse {
+    static_handler(Uri::from_static("overview.html")).await
 }
 
 async fn favicon_handler() -> impl IntoResponse {
