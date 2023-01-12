@@ -5,3 +5,5 @@ Portal server is the entry for whole MirrorX network, and it's responsible for d
 # Dashboard
 
 Dashboard is a simple web site with some basic metrics data.
+
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/portal/master/screenshot.png"/>
