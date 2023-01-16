@@ -10,7 +10,7 @@
 <!-- svelte-ignore a11y-label-has-associated-control -->
 <!-- svelte-ignore a11y-missing-attribute -->
 <div class="w-full h-full flex flex-col">
-	<div class="navbar bg-base-300 py-0 pl-0 pr-2">
+	<div class="navbar bg-base-300 py-0 pl-0 pr-2 flex-0">
 		<div class="flex-none w-56 flex flex-row text-center gap-3">
 			<img width="48" height="48" src={brand} class="pl-2" />
 			<div class="flex flex-col items-start w-full">
@@ -41,11 +41,13 @@
 		</div>
 	</div>
 
-	<div class="flex-1 w-full h-full flex flex-row">
+	<div class="flex-1 w-full h-full flex flex-row overflow-auto">
 		<nav class="w-56 h-full flex-0">
 			<ul class="menu bg-base-200 w-full p-2 h-full">
 				<li class="mb-2">
-					<a href="/overview" class={$page.url.pathname == '/overview' ? 'active' : undefined}>Overview</a>
+					<a href="/overview" class={$page.url.pathname == '/overview' ? 'active' : undefined}
+						>Overview</a
+					>
 				</li>
 			</ul>
 		</nav>

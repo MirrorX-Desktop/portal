@@ -1,16 +1,21 @@
 <script lang="ts">
-	import { fetchStatDetails } from '$lib/api';
-	import type { StatDetails } from '$lib/models';
+	import { fetchStatDetails, fetchStatMetrics } from '$lib/api';
+	import type { MetricsInfo, StatDetails } from '$lib/models';
 	import { faSpinner, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import DetailsPanel from './details_panel.svelte';
 	import Fa from 'svelte-fa';
-	import { formatDeviceID } from '$lib/utils';
+	import { formatDeviceID, formatTransferSpeed, joinClasses } from '$lib/utils';
 	import moment from 'moment';
 	import type { EChartsOption } from 'echarts';
 	import { useECharts } from '$lib/echarts';
+	import { to_number } from 'svelte/internal';
 
 	let statDetails: StatDetails | null = null;
+	let metricsInfo: MetricsInfo | null = null;
+	let metricsTimer: NodeJS.Timer | null = null;
+	$: cpu_usage = to_number(metricsInfo?.cpu_usage ?? 0);
+	$: memory_usage = to_number(metricsInfo?.memory_usage ?? 0);
 
 	var networkTrafficOption: EChartsOption = {
 		title: { text: 'Network Traffic' },
@@ -94,21 +99,42 @@
 	};
 
 	onMount(async () => {
-		statDetails = await fetchStatDetails();
+		// statDetails = await fetchStatDetails();
+		metricsTimer = setInterval(async () => {
+			metricsInfo = await fetchStatMetrics();
+		}, 1000);
 	});
+
+	onDestroy(() => {
+		if (metricsTimer) {
+			clearInterval(metricsTimer);
+		}
+	});
+
+	const metricsColor = (value: number): Array<string> => {
+		if (value >= 80) {
+			return ['bg-error', 'border-error'];
+		} else if (value >= 40) {
+			return ['bg-warning', 'border-warning'];
+		} else {
+			return ['bg-success', 'border-success'];
+		}
+	};
 </script>
 
 <svelte:head>
-	<title>Overview</title>
-	<meta name="description" content="Svelte demo app" />
+	<title>Overview | MirrorX</title>
+	<meta name="description" content="MirrorX" />
 </svelte:head>
 
 <div class="w-full h-full flex flex-col gap-4">
-	<DetailsPanel
-		domain={statDetails?.domain ?? ''}
-		allocated={statDetails?.allocated ?? 0}
-		bytesTransferred={statDetails?.bytes_transferred ?? 0}
-	/>
+	<div class="flex-0">
+		<DetailsPanel
+			domain={statDetails?.domain ?? ''}
+			allocated={statDetails?.allocated ?? 0}
+			bytesTransferred={statDetails?.bytes_transferred ?? 0}
+		/>
+	</div>
 
 	<!-- <div class="overflow-x-auto">
 		{#if statDetails}
@@ -142,37 +168,67 @@
 	</div> -->
 
 	<div class="flex flex-row w-full gap-4">
-		<div class="flex-1 flex flex-row shadow px-4 pt-4 rounded-2xl">
-			<div class="flex-1 flex flex-col gap-8 items-center justify-center">
-				<div
-					class="radial-progress bg-primary text-primary-content border-4 border-primary shadow"
-					style="--value:8; --size:8rem;"
-				>
-					8%
+		<div class="shadow py-4 px-10 rounded-2xl flex flex-col gap-4">
+			<div class="flex flex-row items-center justify-center gap-8">
+				<div class="flex-1 flex flex-col gap-8 items-center justify-center">
+					<div
+						class={joinClasses(
+							metricsColor(cpu_usage),
+							'radial-progress',
+							'text-primary-content',
+							'border-4',
+							'shadow'
+						)}
+						style="--value:{cpu_usage}; --size:8rem;"
+					>
+						{cpu_usage}%
+					</div>
+					<div class="font-bold">CPU</div>
 				</div>
-				<div>CPU</div>
-			</div>
 
-			<div class="flex-1 flex flex-col gap-8 items-center justify-center">
-				<div
-					class="radial-progress bg-primary text-primary-content border-4 border-primary shadow"
-					style="--value:12; --size:8rem;"
-				>
-					12%
+				<div class="flex-1 flex flex-col gap-8 items-center justify-center">
+					<div
+						class={joinClasses(
+							metricsColor(memory_usage),
+							'radial-progress',
+							'text-primary-content',
+							'border-4',
+							'shadow'
+						)}
+						style="--value:{memory_usage}; --size:8rem;"
+					>
+						{memory_usage}%
+					</div>
+					<div class="font-bold">Memory</div>
 				</div>
-				<div>Memory</div>
+			</div>
+			<hr />
+			<div class="flex-1 flex flex-col items-center justify-evenly">
+				<div class="flex flex-row items-center justify-between w-full">
+					<div class="font-bold">In Bytes</div>
+					<div>{formatTransferSpeed(metricsInfo?.network_in_bytes ?? 0)}</div>
+				</div>
+				<div class="flex flex-row items-center justify-between w-full">
+					<div class="font-bold">Out Bytes</div>
+					<div>{formatTransferSpeed(metricsInfo?.network_out_bytes ?? 0)}</div>
+				</div>
+				<div class="flex flex-row items-center justify-between w-full">
+					<div class="font-bold">In Packets</div>
+					<div>{metricsInfo?.network_in_packets ?? 0} pkt/s</div>
+				</div>
+				<div class="flex flex-row items-center justify-between w-full">
+					<div class="font-bold">Out Packets</div>
+					<div>{metricsInfo?.network_out_packets ?? 0} pkt/s</div>
+				</div>
 			</div>
 		</div>
 
 		<div class="flex-1 flex flex-col rounded-2xl shadow px-4 pt-4">
 			<div id="network-charts" class="w-full h-72" use:useECharts={onlineDevicesOption} />
 		</div>
-
-		
 	</div>
 
 	<div class="flex flex-row w-full gap-4">
-
 		<div class="flex-1 flex flex-col rounded-2xl shadow px-4 pt-4">
 			<div id="network-charts" class="w-full h-72" use:useECharts={networkTrafficOption} />
 		</div>
@@ -180,7 +236,5 @@
 		<div class="flex-1 flex flex-col rounded-2xl shadow px-4 pt-4">
 			<div id="network-charts" class="w-full h-72" use:useECharts={sessionsOption} />
 		</div>
-
-		
 	</div>
 </div>

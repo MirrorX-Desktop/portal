@@ -1,3 +1,4 @@
+pub mod component;
 pub mod db;
 pub mod handler;
 pub mod message;

@@ -1,7 +1,11 @@
 use super::model::{EndPointStatResponse, StatDetails};
-use crate::{db::device::query_device_id_count, DOMAIN, ENDPOINT_API_BASE_ADDRS};
-use axum::{http::StatusCode, response::IntoResponse, Json};
+use crate::{
+    component::metrics::SystemMetrics, db::device::query_device_id_count, DOMAIN,
+    ENDPOINT_API_BASE_ADDRS,
+};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use reqwest::Url;
+use std::sync::Arc;
 
 pub async fn details() -> impl IntoResponse {
     let allocated = match query_device_id_count().await {
@@ -53,5 +57,11 @@ pub async fn details() -> impl IntoResponse {
         client_snapshot: clients.unwrap_or_default(),
     });
 
+    (StatusCode::OK, response).into_response()
+}
+
+pub async fn system_stat(State(metrics): State<Arc<SystemMetrics>>) -> impl IntoResponse {
+    let metrics_info = metrics.get().await;
+    let response = Json(metrics_info);
     (StatusCode::OK, response).into_response()
 }

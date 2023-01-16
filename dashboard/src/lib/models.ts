@@ -10,3 +10,12 @@ export interface StatDetails {
 		timestamp: number;
 	}>;
 }
+
+export interface MetricsInfo {
+	cpu_usage: string;
+	memory_usage: string;
+	network_in_bytes: number;
+	network_out_bytes: number;
+	network_in_packets: number;
+	network_out_packets: number;
+}

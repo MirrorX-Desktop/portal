@@ -1,4 +1,4 @@
-use crate::{handler, DASHBOARD_PORT};
+use crate::{component::metrics, handler, DASHBOARD_PORT};
 use axum::{
     body::{boxed, Full},
     handler::HandlerWithoutStateExt,
@@ -8,7 +8,10 @@ use axum::{
     Router,
 };
 use rust_embed::RustEmbed;
-use std::net::{Ipv4Addr, SocketAddr};
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 #[derive(RustEmbed)]
 #[folder = "dashboard/build"]
@@ -17,16 +20,24 @@ struct DashboardDist;
 pub async fn launch_dashboard_server() {
     let dashboard_listen_addr: SocketAddr = (Ipv4Addr::LOCALHOST, *DASHBOARD_PORT).into();
 
+    let system_metrics = Arc::new(metrics::SystemMetrics::new());
+
     let app = Router::new()
         .route("/", get(index_page_handler))
-        .route("/overview",get(overview_page_handler))
+        .route("/overview", get(overview_page_handler))
         .route("/favicon.png", get(favicon_handler))
         .route("/robots.txt", get(robots_handler))
         .route("/vite-manifest.json", get(vite_manifest_handler))
         .route_service("/_app/*file", static_handler.into_service())
         .fallback_service(get(not_found));
 
-    let app = app.route("/api/stat/details", get(handler::dashboard::stat::details));
+    let app = app
+        .route("/api/stat/details", get(handler::dashboard::stat::details))
+        .route(
+            "/api/stat/metrics",
+            get(handler::dashboard::stat::system_stat),
+        )
+        .with_state(system_metrics);
 
     // Start listening on the given address.
 
