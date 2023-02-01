@@ -1,0 +1,39 @@
+version: '3'
+
+# networks:
+#   mirrorx-net:
+#     external: false
+
+services:
+  portal:
+    container_name: mirrorx-portal
+    # ports:
+    #   - 6500:6500
+    #   - 28000:28000
+    #   - 28001:28001
+    image: mirrorx-portal:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # volumes:
+    #   - ./env:/app/portal/.env
+    # networks:
+    #   - mirrorx-net
+    network_mode: host
+    restart: unless-stopped
+
+  relay:
+    container_name: mirrorx-relay
+    # ports:
+    #   - 6501:6501
+    #   - 38000:38000
+    image: mirrorx-relay:latest
+    build:
+      context: ../relay/
+      dockerfile: ../relay/Dockerfile
+    network_mode: host
+    # volumes:
+    #   - ./env:/app/relay/.env
+    # networks:
+    #   - mirrorx-net
+    restart: unless-stopped
